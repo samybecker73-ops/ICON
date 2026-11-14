@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08090b" />
+  <title>ICON</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="splash" class="splash-screen">
+    <canvas id="wave-canvas" aria-hidden="true"></canvas>
+    <div class="splash-vignette" aria-hidden="true"></div>
+    <div class="window-controls splash-controls">
+      <button class="window-control" data-window="minimize" aria-label="Réduire">—</button>
+      <button class="window-control" data-window="maximize" aria-label="Agrandir">□</button>
+      <button class="window-control close" data-window="close" aria-label="Fermer">×</button>
+    </div>
+    <main class="splash-content">
+      <div class="splash-wordmark">ICON</div>
+      <div class="loading-dots" aria-label="Chargement"><i></i><i></i><i></i></div>
+      <h1>Analyse de votre PC</h1>
+      <p id="scan-status">Lecture des informations système…</p>
+      <div class="progress-row">
+        <div class="progress-track"><div id="boot-progress" class="progress-value"></div></div>
+        <strong id="boot-percent">0 %</strong>
+      </div>
+      <div id="boot-error" class="boot-error" role="status"></div>
+    </main>
+  </div>
+
+  <div id="app" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand-block"><div class="brand-wordmark">ICON</div><span class="brand-caption">PC CONTROL</span></div>
+      <nav class="main-nav" aria-label="Navigation principale">
+        <button class="nav-item active" data-page="home"><span class="nav-icon">⌂</span><span>Accueil</span></button>
+        <button class="nav-item" data-page="pc"><span class="nav-icon">▣</span><span>Mon PC</span></button>
+        <button class="nav-item future" data-feature="Analyse disque"><span class="nav-icon">▤</span><span>Analyse disque</span><small>À venir</small></button>
+        <button class="nav-item future" data-feature="Processus"><span class="nav-icon">◫</span><span>Processus</span><small>À venir</small></button>
+        <button class="nav-item future" data-feature="Sécurité"><span class="nav-icon">◇</span><span>Sécurité</span><small>À venir</small></button>
+        <button class="nav-item future" data-feature="Éléments cachés"><span class="nav-icon">◉</span><span>Éléments cachés</span><small>À venir</small></button>
+        <button class="nav-item future" data-feature="Optimisation"><span class="nav-icon">ϟ</span><span>Optimisation</span><small>À venir</small></button>
+        <button class="nav-item future" data-feature="Outils"><span class="nav-icon">▦</span><span>Outils</span><small>À venir</small></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item subtle" id="replay-tour"><span class="nav-icon">?</span><span>Visite guidée</span></button>
+        <button class="nav-item subtle" id="open-settings"><span class="nav-icon">⚙</span><span>Paramètres</span></button>
+        <div class="sidebar-version">ICON · Version 0.2.1</div>
+      </div>
+    </aside>
+
+    <section class="main-area">
+      <header class="titlebar">
+        <div class="titlebar-label">Centre de contrôle</div>
+        <div class="window-controls">
+          <button class="window-control" data-window="minimize" aria-label="Réduire">—</button>
+          <button class="window-control" data-window="maximize" aria-label="Agrandir">□</button>
+          <button class="window-control close" data-window="close" aria-label="Fermer">×</button>
+        </div>
+      </header>
+
+      <main class="dashboard" id="dashboard">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">VUE D’ENSEMBLE</div>
+            <h1>Bonjour.</h1>
+            <p>Voici les informations disponibles sur votre PC.</p>
+          </div>
+          <button class="button button-secondary" id="refresh-button"><span class="button-symbol">↻</span> Actualiser les données</button>
+        </div>
+
+        <section class="overview-banner">
+          <div class="banner-mark">i</div>
+          <div class="banner-copy"><strong>Votre espace ICON est prêt</strong><span>Les informations matérielles de base ont été récupérées localement sur cet ordinateur.</span></div>
+          <span class="banner-tag">LOCAL</span>
+        </section>
+
+        <section class="section-block" aria-labelledby="resource-title">
+          <div class="section-heading"><div><div class="eyebrow">SURVEILLANCE</div><h2 id="resource-title">Ressources du système</h2></div><span class="live-indicator"><i></i> Actualisation automatique</span></div>
+          <div class="stats-grid">
+            <article class="stat-card" id="cpu-card">
+              <div class="stat-top"><span class="stat-label">Processeur</span><span class="stat-icon">⌘</span></div>
+              <div class="stat-value" id="cpu-value">—<small>%</small></div>
+              <div class="stat-description" id="cpu-caption">Mesure en cours</div>
+              <div class="mini-track"><span id="cpu-bar"></span></div>
+            </article>
+            <article class="stat-card" id="memory-card">
+              <div class="stat-top"><span class="stat-label">Mémoire RAM</span><span class="stat-icon">▥</span></div>
+              <div class="stat-value" id="memory-value">—<small>%</small></div>
+              <div class="stat-description" id="memory-caption">Lecture en cours</div>
+              <div class="mini-track"><span id="memory-bar"></span></div>
+            </article>
+            <article class="stat-card" id="disk-card">
+              <div class="stat-top"><span class="stat-label">Stockage principal</span><span class="stat-icon">▤</span></div>
+              <div class="stat-value" id="disk-value">—<small>%</small></div>
+              <div class="stat-description" id="disk-caption">Détection des volumes</div>
+              <div class="mini-track"><span id="disk-bar"></span></div>
+            </article>
+            <article class="stat-card" id="gpu-card">
+              <div class="stat-top"><span class="stat-label">Carte graphique</span><span class="stat-icon">▧</span></div>
+              <div class="stat-value stat-value-text" id="gpu-value">À venir</div>
+              <div class="stat-description">Mesure avancée non intégrée</div>
+              <div class="mini-track muted-track"><span></span></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel system-panel">
+            <div class="panel-heading"><div><div class="eyebrow">CONFIGURATION</div><h2>Votre ordinateur</h2></div><button class="text-button" id="open-pc-page">Voir les détails →</button></div>
+            <div class="system-name" id="computer-name">Ordinateur</div>
+            <div class="system-subtitle" id="system-subtitle">Lecture du système…</div>
+            <div class="detail-list">
+              <div class="detail-row"><span>Processeur</span><strong id="detail-cpu">—</strong></div>
+              <div class="detail-row"><span>Cœurs logiques</span><strong id="detail-cores">—</strong></div>
+              <div class="detail-row"><span>Architecture</span><strong id="detail-arch">—</strong></div>
+              <div class="detail-row"><span>Mémoire installée</span><strong id="detail-ram">—</strong></div>
+              <div class="detail-row"><span>Temps de fonctionnement</span><strong id="detail-uptime">—</strong></div>
+            </div>
+          </article>
+
+          <article class="panel storage-panel">
+            <div class="panel-heading"><div><div class="eyebrow">ESPACE DISQUE</div><h2>Stockage détecté</h2></div><span class="panel-icon">▤</span></div>
+            <div id="disk-list" class="disk-list"><div class="empty-state">Recherche des volumes disponibles…</div></div>
+            <div class="panel-footnote">La répartition détaillée des fichiers sera ajoutée dans le module Analyse disque.</div>
+          </article>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="panel security-preview">
+            <div class="panel-heading"><div><div class="eyebrow">PROTECTION</div><h2>État de sécurité</h2></div><span class="status-pill status-pending">Non analysé</span></div>
+            <p>Le moteur d’analyse antivirus et de détection des éléments suspects n’est pas encore intégré.</p>
+            <div class="security-note"><span>i</span><span>ICON ne déclarera pas un PC sain avant d’avoir effectué une véritable analyse de sécurité.</span></div>
+          </article>
+          <article class="panel next-panel">
+            <div class="panel-heading"><div><div class="eyebrow">FEUILLE DE ROUTE</div><h2>Les prochains modules</h2></div></div>
+            <div class="next-list"><div><span class="next-number">01</span><span>Inventaire détaillé du PC</span><em>À construire</em></div><div><span class="next-number">02</span><span>Analyse des fichiers et du disque</span><em>À construire</em></div><div><span class="next-number">03</span><span>Processus et sécurité</span><em>À construire</em></div></div>
+          </article>
+        </section>
+
+        <footer class="dashboard-footer"><span>ICON · Centre de contrôle PC</span><span id="last-updated">Données locales · En attente</span></footer>
+      </main>
+
+      <main class="dashboard pc-page hidden" id="pc-page">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">INVENTAIRE MATÉRIEL</div>
+            <h1>Mon PC.</h1>
+            <p>Une vue détaillée des composants et équipements détectés sur cet ordinateur.</p>
+          </div>
+          <div class="heading-actions">
+            <button class="button button-secondary" id="pc-export-button">Exporter le rapport</button>
+            <button class="button button-primary" id="pc-refresh-button"><span class="button-symbol">↻</span> Analyser mon PC</button>
+          </div>
+        </div>
+
+        <section class="pc-identity panel">
+          <div class="pc-identity-main">
+            <div class="pc-device-mark">▣</div>
+            <div>
+              <div class="eyebrow">APPAREIL DÉTECTÉ</div>
+              <h2 id="pc-device-name">Inventaire en attente</h2>
+              <p id="pc-device-subtitle">Lancez une analyse pour identifier la configuration.</p>
+            </div>
+          </div>
+          <div class="pc-identity-status" id="pc-scan-status">Non analysé</div>
+        </section>
+
+        <nav class="pc-tabs" aria-label="Détails du PC">
+          <button class="pc-tab active" data-pc-tab="overview">Vue d’ensemble</button>
+          <button class="pc-tab" data-pc-tab="processor">Processeur</button>
+          <button class="pc-tab" data-pc-tab="graphics">Graphique</button>
+          <button class="pc-tab" data-pc-tab="memory">Mémoire</button>
+          <button class="pc-tab" data-pc-tab="board">Carte mère & BIOS</button>
+          <button class="pc-tab" data-pc-tab="storage">Disques</button>
+          <button class="pc-tab" data-pc-tab="network">Réseau & écrans</button>
+        </nav>
+
+        <section class="pc-tab-panel" id="pc-tab-overview">
+          <div class="pc-summary-grid" id="pc-summary-grid">
+            <div class="empty-state panel">Les informations détaillées apparaîtront ici après la première analyse.</div>
+          </div>
+          <div class="content-grid pc-lower-grid">
+            <article class="panel">
+              <div class="panel-heading"><div><div class="eyebrow">SYSTÈME D’EXPLOITATION</div><h2>Windows et environnement</h2></div><span class="panel-icon">▣</span></div>
+              <div class="pc-data-list" id="pc-os-details"><div class="empty-state">En attente de l’analyse.</div></div>
+            </article>
+            <article class="panel">
+              <div class="panel-heading"><div><div class="eyebrow">MACHINE</div><h2>Informations générales</h2></div><span class="panel-icon">⌘</span></div>
+              <div class="pc-data-list" id="pc-computer-details"><div class="empty-state">En attente de l’analyse.</div></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="pc-tab-panel hidden" id="pc-tab-processor">
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">UNITÉ CENTRALE</div><h2>Processeur détecté</h2></div><span class="panel-icon">⌘</span></div><div id="pc-processors" class="pc-card-list"><div class="empty-state">En attente de l’analyse.</div></div></article>
+        </section>
+        <section class="pc-tab-panel hidden" id="pc-tab-graphics">
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">AFFICHAGE</div><h2>Cartes graphiques et pilotes</h2></div><span class="panel-icon">▧</span></div><div id="pc-graphics" class="pc-card-list"><div class="empty-state">En attente de l’analyse.</div></div></article>
+        </section>
+        <section class="pc-tab-panel hidden" id="pc-tab-memory">
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">MÉMOIRE PHYSIQUE</div><h2>Barrettes RAM détectées</h2></div><span class="panel-icon">▥</span></div><div id="pc-memory-modules" class="pc-card-list"><div class="empty-state">En attente de l’analyse.</div></div></article>
+        </section>
+        <section class="pc-tab-panel hidden" id="pc-tab-board">
+          <div class="content-grid">
+            <article class="panel"><div class="panel-heading"><div><div class="eyebrow">CARTE MÈRE</div><h2>Carte mère</h2></div><span class="panel-icon">▦</span></div><div id="pc-baseboards" class="pc-data-list"><div class="empty-state">En attente de l’analyse.</div></div></article>
+            <article class="panel"><div class="panel-heading"><div><div class="eyebrow">MICROLOGICIEL</div><h2>BIOS / UEFI</h2></div><span class="panel-icon">⌁</span></div><div id="pc-bios" class="pc-data-list"><div class="empty-state">En attente de l’analyse.</div></div></article>
+          </div>
+        </section>
+        <section class="pc-tab-panel hidden" id="pc-tab-storage">
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">STOCKAGE PHYSIQUE</div><h2>Disques installés</h2></div><span class="panel-icon">▤</span></div><div id="pc-physical-disks" class="pc-card-list"><div class="empty-state">En attente de l’analyse.</div></div><p class="panel-footnote">Cette vue identifie les disques physiques. L’analyse des dossiers et fichiers sera développée dans « Analyse disque ».</p></article>
+        </section>
+        <section class="pc-tab-panel hidden" id="pc-tab-network">
+          <div class="content-grid">
+            <article class="panel"><div class="panel-heading"><div><div class="eyebrow">CONNECTIVITÉ</div><h2>Adaptateurs réseau physiques</h2></div><span class="panel-icon">⌁</span></div><div id="pc-network" class="pc-card-list"><div class="empty-state">En attente de l’analyse.</div></div></article>
+            <article class="panel"><div class="panel-heading"><div><div class="eyebrow">AFFICHAGE</div><h2>Écrans détectés</h2></div><span class="panel-icon">▣</span></div><div id="pc-monitors" class="pc-card-list"><div class="empty-state">En attente de l’analyse.</div></div></article>
+          </div>
+        </section>
+
+        <footer class="dashboard-footer"><span>ICON · Inventaire matériel local</span><span id="pc-last-updated">Aucune analyse effectuée</span></footer>
+      </main>
+    </section>
+  </div>
+
+  <div id="tour-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+    <div class="tour-card">
+      <button class="modal-close" id="tour-close" aria-label="Fermer">×</button>
+      <div class="eyebrow">PREMIÈRE UTILISATION · <span id="tour-step-label">1 / 3</span></div>
+      <div class="tour-mark">ICON</div>
+      <h2 id="tour-title">Bienvenue dans ICON.</h2>
+      <p id="tour-description">Votre centre de contrôle PC, sans compte et sans inscription.</p>
+      <div class="tour-dots"><i class="active"></i><i></i><i></i></div>
+      <div class="tour-actions"><button class="button button-quiet" id="tour-skip">Passer la visite</button><button class="button button-primary" id="tour-next">Suivant <span>→</span></button></div>
+    </div>
+  </div>
+
+  <div id="settings-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <section class="settings-card">
+      <button class="modal-close" id="settings-close" aria-label="Fermer les paramètres">×</button>
+      <div class="eyebrow">APPLICATION</div>
+      <h2 id="settings-title">Paramètres</h2>
+      <p class="settings-intro">Informations sur ICON et gestion des mises à jour.</p>
+      <div class="settings-version-row">
+        <div class="settings-logo">ICON</div>
+        <div><strong>ICON pour Windows</strong><span>Version installée : <b id="update-current-version">—</b></span></div>
+      </div>
+      <div class="update-section">
+        <div class="update-section-heading"><div><div class="eyebrow">MISES À JOUR</div><h3>Version du logiciel</h3></div><span class="update-source">GitHub Releases</span></div>
+        <p id="update-status" class="update-status">Prêt à vérifier les mises à jour.</p>
+        <div id="update-progress-wrap" class="update-progress-wrap hidden"><div class="update-progress-track"><span id="update-progress"></span></div><span id="update-progress-label">0 %</span></div>
+        <p id="update-release-notes" class="update-release-notes hidden"></p>
+        <div class="update-actions">
+          <button class="button button-secondary" id="check-updates-button">Vérifier les mises à jour</button>
+          <button class="button button-primary hidden" id="download-update-button">Télécharger</button>
+          <button class="button button-primary hidden" id="install-update-button">Installer et redémarrer</button>
+        </div>
+        <div class="settings-footnote">Les mises à jour sont téléchargées depuis le dépôt public ICON. Aucun compte ni jeton personnel n’est nécessaire.</div>
+      </div>
+      <div class="settings-bottom"><span>ICON · Centre de contrôle PC</span><span>Les mises à jour ne s’installent qu’après validation.</span></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="./renderer.js"></script>
+</body>
+</html>
