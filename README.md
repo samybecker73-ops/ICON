@@ -1,49 +1,58 @@
 # ICON
 
-ICON est un centre de contrôle PC local, développé avec Electron. Aucune inscription, aucun compte et aucun envoi de données système vers un serveur ne sont requis.
+ICON est un centre de contrôle PC local, développé avec Electron. Aucun compte utilisateur, aucune inscription et aucune transmission des données système vers un serveur ne sont requis.
 
-## Source
+## État du dépôt
 
-La version source actuellement publiée est conservée dans [source/ICON-0.2.1.zip](source/ICON-0.2.1.zip). Extrais l’archive puis ouvre le dossier `ICON-0.2.1`.
+Les workflows de compilation et de publication sont configurés. L’import initial du code source 0.2.1 doit encore être effectué depuis l’archive **ICON-GITHUB-IMPORT-0.2.1.zip** fournie dans cette conversation.
+
+### Import initial des sources
+
+1. Télécharge et extrais l’archive \`ICON-GITHUB-IMPORT-0.2.1.zip\`.
+2. Clone ce dépôt avec GitHub Desktop : https://github.com/samybecker73-ops/ICON
+3. Copie le contenu du dossier extrait dans le dossier local du dépôt cloné.
+4. Accepte le remplacement de README, .gitignore et .github/workflows.
+5. Dans GitHub Desktop, crée un commit nommé \`Import ICON 0.2.1 source\`, puis clique sur **Push origin**.
+
+Après cette étape, le dépôt contiendra le projet Electron complet et les workflows pourront compiler le logiciel.
 
 ## Lancer en développement
 
 Prérequis : Node.js 20+ et npm.
 
-```powershell
+\`\`\`powershell
 npm install
 npm start
-```
+\`\`\`
 
 ## Construire l’installateur Windows
 
-Depuis le dossier extrait, double-clique sur `BUILD-ICON.cmd`. Le fichier génère l’installateur NSIS dans `dist/`.
+Depuis la racine du dépôt, double-clique sur \`BUILD-ICON.cmd\`. Le setup est généré dans \`dist/\`.
 
 ## Mises à jour automatiques
 
-La version Windows installée intègre `electron-updater`. Depuis **Paramètres → Mises à jour**, ICON vérifie la GitHub Release publique, propose de télécharger l’installateur et redémarre pour appliquer la mise à jour. Le téléchargement n’est pas imposé à l’utilisateur.
+La version Windows installée intègre \`electron-updater\`. Depuis **Paramètres → Mises à jour**, ICON vérifie les GitHub Releases publiques, propose le téléchargement, puis installe après validation et redémarrage. Aucun compte ni jeton GitHub personnel n’est intégré à l’application.
 
-Le dépôt doit rester public. Aucun jeton GitHub personnel n’est intégré à l’application. GitHub Actions utilise uniquement le `GITHUB_TOKEN` automatique avec une permission limitée à la publication de releases.
+Le dépôt doit rester public. GitHub Actions utilise uniquement le \`GITHUB_TOKEN\` temporaire avec la permission de publier les releases.
 
 ## Publier une version
 
-1. Augmenter `version` dans le `package.json` du projet.
-2. Mettre à jour l’archive source sous `source/` avec le même numéro.
-3. Envoyer le changement sur `main`.
-4. Dans **Actions → ICON Release**, lancer le workflow en indiquant le tag correspondant, par exemple `v0.2.1`.
-5. Le workflow valide que le tag et la version de l’application correspondent, construit le setup Windows et publie les fichiers de mise à jour dans GitHub Releases.
+1. Incrémente \`version\` dans \`package.json\`.
+2. Envoie le changement sur \`main\`.
+3. Ouvre **Actions → ICON Release → Run workflow** et saisis le tag correspondant, par exemple \`v0.2.2\`.
+4. Le workflow vérifie la correspondance entre le tag et la version, construit l’installateur Windows et publie les fichiers d’update dans GitHub Releases.
 
-Pour la toute première installation, les utilisateurs doivent installer manuellement `ICON-Setup-0.2.1.exe` depuis la première GitHub Release. Les mises à jour suivantes seront proposées directement dans l’application.
+La première installation de cette génération nécessite d’installer manuellement ICON 0.2.1. Les versions ultérieures pourront être proposées directement depuis l’application.
 
 ## Fonctions de la version 0.2.1
 
 - Écran de lancement animé et tableau de bord sombre.
-- Mesures CPU et RAM, volumes logiques.
+- Mesures CPU et RAM et volumes logiques.
 - Inventaire matériel Windows via PowerShell/CIM.
-- Export local de rapport JSON.
+- Export local d’un rapport JSON.
 - Visite guidée locale.
 - Paramètres et vérification des mises à jour GitHub.
 
-## Limites de la version actuelle
+## Limites connues
 
-L’analyse détaillée de l’espace disque, les processus, les éléments cachés, l’antivirus et l’optimisation sont prévus pour de prochaines étapes. ICON n’affiche pas de résultat antivirus fictif.
+L’analyse détaillée de l’espace disque, les processus, les éléments cachés, l’antivirus et l’optimisation restent à construire. ICON n’affiche pas de résultat antivirus fictif.
