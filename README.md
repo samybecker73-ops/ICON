@@ -30,11 +30,8 @@ Double-clique sur `BUILD-ICON.cmd`. Le setup est généré dans `dist/ICON-Setup
 ## Publier une version
 
 1. Augmenter `version` dans `package.json` (par exemple `0.2.2`).
-2. Envoyer le commit sur `main`.
-3. Ouvrir GitHub → **Actions** → **ICON Release** → **Run workflow**.
-4. Indiquer le tag correspondant, par exemple `v0.2.2`.
-5. GitHub Actions vérifie la version, compile le setup Windows et publie les fichiers de mise à jour dans GitHub Releases.
+2. Envoyer les changements sur la branche `main`.
+3. GitHub Actions vérifie si une Release portant ce numéro existe déjà. Si elle n'existe pas, il crée le tag, compile l'installateur Windows et publie automatiquement la GitHub Release.
+4. Les utilisateurs ouvrent **Paramètres → Mises à jour** dans ICON pour vérifier la nouvelle version, la télécharger puis l'installer après validation et redémarrage.
 
-Les utilisateurs de la version installée peuvent ensuite ouvrir **Paramètres → Mises à jour** pour vérifier la disponibilité, télécharger la nouvelle version et l'installer après validation et redémarrage.
-
-Le dépôt doit rester public. Le jeton `GITHUB_TOKEN` est utilisé uniquement par GitHub Actions pour publier les Releases ; aucun jeton personnel n'est intégré à ICON.
+Aucune action manuelle dans l'onglet Actions n'est requise pour les versions suivantes. Le dépôt doit rester public. Le jeton `GITHUB_TOKEN` est utilisé uniquement par GitHub Actions ; aucun jeton personnel n'est intégré à ICON.
