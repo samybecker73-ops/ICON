@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: icon-release-main
+  cancel-in-progress: true
+
 jobs:
   release-windows:
     name: Publish a new ICON version when package.json changes
