@@ -12,6 +12,10 @@ let refreshLock = false;
 let inventoryLock = false;
 let activeTour = 0;
 let toastTimer;
+const moduleCache={processes:[],applications:[],startup:[],security:null,network:[],diskScan:null,hiddenScan:null};
+const scanSelection={disk:null,hidden:null};
+const moduleLocks=new Set();
+let removeScanProgressListener=null;
 
 const tour = [
   {
@@ -20,11 +24,11 @@ const tour = [
   },
   {
     title: 'Comprenez votre ordinateur.',
-    text: 'L’accueil affiche les ressources principales. Mon PC détaille les composants, le système, les disques et les périphériques.'
+    text: 'Explorez les disques, les processus, les applications installées, le démarrage, le réseau et les informations de sécurité Windows.'
   },
   {
     title: 'ICON va évoluer avec vous.',
-    text: 'L’analyse des fichiers, les processus, la sécurité et les éléments cachés seront ajoutés progressivement.'
+    text: 'Les analyses restent locales et en lecture seule. ICON ne supprime aucun fichier et ne présente pas une protection antivirus comme active sans preuve.'
   }
 ];
 
@@ -349,10 +353,11 @@ async function exportReport() {
   try {
     const result = await window.iconAPI.exportReport({
       application: 'ICON',
-      version: '0.2.1',
+      version: updateInfo?.currentVersion || '0.2.1',
       generatedAt: new Date().toISOString(),
       note: 'Rapport local : inventaire matériel et mesures système. Aucune analyse antivirus ni analyse approfondie de fichiers effectuée.',
       hardwareDetails: hardwareInventory,
+      modules: moduleCache,
       ...currentSnapshot
     });
     if (!result.canceled) toastMessage('Rapport système exporté.');
@@ -470,6 +475,152 @@ async function installUpdate() {
   }
 }
 
+
+function shortDate(value){if(!value)return 'Non communiqué';const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString('fr-FR');}
+function renderTable(selector,columns,data,emptyText){
+ const node=$(selector);if(!node)return;if(!data.length){node.innerHTML='<div class="empty-state">'+esc(emptyText||'Aucune donnée communiquée.')+'</div>';return;}
+ node.innerHTML='<table class="module-table"><thead><tr>'+columns.map(c=>'<th>'+esc(c.label)+'</th>').join('')+'</tr></thead><tbody>'+
+ data.map(item=>'<tr>'+columns.map(c=>'<td>'+(c.render?c.render(item):esc(valueOr(item[c.key],'—')))+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+}
+function filterItems(items,search,fields){const q=String(search||'').trim().toLocaleLowerCase('fr-FR');return q?items.filter(item=>fields.some(f=>String(item[f]??'').toLocaleLowerCase('fr-FR').includes(q))):items;}
+
+function renderProcesses(){
+ const items=moduleCache.processes;$('#process-count').textContent=items.length.toLocaleString('fr-FR');
+ $('#process-memory').textContent=bytes(items.reduce((s,x)=>s+(Number(x.memoryBytes)||0),0));
+ $('#process-threads').textContent=items.reduce((s,x)=>s+(Number(x.threads)||0),0).toLocaleString('fr-FR');
+ renderTable('#process-table',[
+  {label:'Processus',key:'name'},{label:'PID',key:'pid'},{label:'Mémoire',render:x=>esc(bytes(x.memoryBytes))},
+  {label:'CPU cumulé',render:x=>esc((Number(x.cpuSeconds)||0).toLocaleString('fr-FR',{maximumFractionDigits:1})+' s')},
+  {label:'Threads',key:'threads'},{label:'Handles',key:'handles'}
+ ],filterItems(items,$('#process-search').value,['name','pid','path']),'Aucun processus ne correspond à la recherche.');
+}
+async function loadProcesses(){
+ if(moduleLocks.has('processes'))return;moduleLocks.add('processes');$('#process-table').innerHTML='<div class="empty-state">Lecture des processus Windows…</div>';
+ try{const r=await window.iconAPI.getProcesses();if(!r.supported){$('#process-table').innerHTML='<div class="empty-state">'+esc(r.message)+'</div>';return;}
+ moduleCache.processes=(r.items||[]).sort((a,b)=>(Number(b.memoryBytes)||0)-(Number(a.memoryBytes)||0));renderProcesses();
+ }catch(e){console.error('ICON processes:',e);$('#process-table').innerHTML='<div class="empty-state">Impossible de lire les processus.</div>';}finally{moduleLocks.delete('processes');}
+}
+
+function renderApplications(){
+ const items=moduleCache.applications;$('#apps-count').textContent=items.length.toLocaleString('fr-FR');
+ $('#apps-publishers').textContent=new Set(items.map(x=>x.publisher).filter(Boolean)).size.toLocaleString('fr-FR');
+ renderTable('#apps-table',[
+  {label:'Application',key:'name'},{label:'Version',key:'version'},{label:'Éditeur',key:'publisher'},
+  {label:'Installée le',key:'installDate'},{label:'Taille déclarée',render:x=>esc(x.estimatedSizeKb?bytes(Number(x.estimatedSizeKb)*1024):'—')}
+ ],filterItems(items,$('#apps-search').value,['name','version','publisher']),'Aucune application ne correspond à la recherche.');
+}
+async function loadApplications(){
+ if(moduleLocks.has('applications'))return;moduleLocks.add('applications');$('#apps-table').innerHTML='<div class="empty-state">Lecture des applications installées…</div>';
+ try{const r=await window.iconAPI.getInstalledApplications();if(!r.supported){$('#apps-table').innerHTML='<div class="empty-state">'+esc(r.message)+'</div>';return;}
+ moduleCache.applications=(r.items||[]).sort((a,b)=>String(a.name).localeCompare(String(b.name),'fr'));renderApplications();
+ }catch(e){console.error('ICON apps:',e);$('#apps-table').innerHTML='<div class="empty-state">Impossible de lire le registre.</div>';}finally{moduleLocks.delete('applications');}
+}
+function renderStartup(){
+ const items=moduleCache.startup;$('#startup-count').textContent=items.length.toLocaleString('fr-FR');
+ $('#startup-users').textContent=new Set(items.map(x=>x.user).filter(Boolean)).size.toLocaleString('fr-FR');
+ renderTable('#startup-table',[
+  {label:'Élément',key:'name'},{label:'Utilisateur',key:'user'},{label:'Emplacement',key:'location'},
+  {label:'Commande',render:x=>'<span class="path-cell" title="'+esc(x.command||'')+'">'+esc(x.command||'Non communiqué')+'</span>'}
+ ],filterItems(items,$('#startup-search').value,['name','command','location','user']),'Aucune entrée ne correspond à la recherche.');
+}
+async function loadStartup(){
+ if(moduleLocks.has('startup'))return;moduleLocks.add('startup');$('#startup-table').innerHTML='<div class="empty-state">Lecture des entrées de démarrage…</div>';
+ try{const r=await window.iconAPI.getStartupApplications();if(!r.supported){$('#startup-table').innerHTML='<div class="empty-state">'+esc(r.message)+'</div>';return;}
+ moduleCache.startup=(r.items||[]).sort((a,b)=>String(a.name).localeCompare(String(b.name),'fr'));renderStartup();
+ }catch(e){console.error('ICON startup:',e);$('#startup-table').innerHTML='<div class="empty-state">Impossible de lire les entrées.</div>';}finally{moduleLocks.delete('startup');}
+}
+function stateText(v){if(v===true)return{label:'Activé',state:'positive'};if(v===false)return{label:'Désactivé',state:'warning'};return{label:'Non communiqué',state:'neutral'};}
+function renderSecurity(data){
+ moduleCache.security=data;const d=data?.defender;const fw=data?.firewall||[];
+ if(!data?.supported||!d){
+  $('#security-state-banner').className='security-state-banner neutral';
+  $('#security-state-banner').innerHTML='<strong>État non disponible</strong><span>Windows n’a pas communiqué les informations de Microsoft Defender. Vérifiez Sécurité Windows.</span>';
+  $('#security-cards').innerHTML=[['Antivirus','Inconnu','Aucune donnée fiable'],['Protection temps réel','Inconnue','Aucune donnée fiable'],['Pare-feu','Inconnu','Aucune donnée fiable'],['Signatures','Inconnues','Aucune donnée fiable']]
+   .map(a=>'<article class="module-stat"><span>'+esc(a[0])+'</span><strong>'+esc(a[1])+'</strong><small>'+esc(a[2])+'</small></article>').join('');
+  $('#security-defender-details').innerHTML='<div class="empty-state">Aucun statut exploitable. ICON ne conclut pas que le PC est protégé.</div>';
+ }else{
+  const av=stateText(d.antivirusEnabled),rt=stateText(d.realTimeProtectionEnabled);
+  const known=fw.length>0&&fw.every(x=>typeof x.enabled==='boolean'),fwOn=known&&fw.every(x=>x.enabled===true);
+  const sig=d.signatureVersion||'Non communiquée';const all=av.state==='positive'&&rt.state==='positive'&&known&&fwOn;
+  $('#security-state-banner').className='security-state-banner '+(all?'positive':'warning');
+  $('#security-state-banner').innerHTML='<strong>'+(all?'Protections vérifiées comme activées':'Vérifications nécessaires')+'</strong><span>Informations retournées par Windows à '+esc(shortDate(data.collectedAt))+'.</span>';
+  $('#security-cards').innerHTML=[
+   ['Antivirus',av.label,'Microsoft Defender',av.state],['Protection temps réel',rt.label,'Surveillance en direct',rt.state],
+   ['Pare-feu',known?(fwOn?'Activé':'Partiel / désactivé'):'Inconnu',fw.length+' profil(s)',known&&fwOn?'positive':'warning'],
+   ['Signatures',sig,d.signatureUpdated?shortDate(d.signatureUpdated):'Date inconnue','neutral']
+  ].map(a=>'<article class="module-stat '+a[3]+'"><span>'+esc(a[0])+'</span><strong>'+esc(a[1])+'</strong><small>'+esc(a[2])+'</small></article>').join('');
+  $('#security-defender-details').innerHTML=rows([
+   ['Service antivirus',stateText(d.serviceEnabled).label],['Antivirus actif',av.label],['Protection temps réel',rt.label],
+   ['Protection comportementale',stateText(d.behaviorMonitorEnabled).label],['Fichiers téléchargés',stateText(d.ioavProtectionEnabled).label],
+   ['Protection contre les altérations',stateText(d.tamperProtectionEnabled).label],['Version des signatures',sig],
+   ['Dernière mise à jour',shortDate(d.signatureUpdated)],['Début dernière analyse rapide',shortDate(d.quickScanStarted)],['Fin dernière analyse rapide',shortDate(d.quickScanEnded)]
+  ]);
+ }
+ $('#security-firewall-details').innerHTML=fw.length?fw.map(x=>rows([['Profil',x.name],['État',stateText(x.enabled).label],['Entrant par défaut',x.inboundAction],['Sortant par défaut',x.outboundAction]])).join(''):'<div class="empty-state">Aucun état de pare-feu communiqué.</div>';
+}
+async function loadSecurity(){
+ if(moduleLocks.has('security'))return;moduleLocks.add('security');$('#security-state-banner').innerHTML='<strong>Lecture en cours…</strong><span>Interrogation de Defender et du pare-feu Windows.</span>';
+ try{renderSecurity(await window.iconAPI.getSecurityStatus());}catch(e){console.error('ICON security:',e);renderSecurity({supported:false,defender:null,firewall:[]});}finally{moduleLocks.delete('security');}
+}
+async function requestQuickScan(){
+ if(!window.confirm('Demander à Microsoft Defender de lancer une analyse rapide ? L’analyse sera exécutée par Windows.'))return;
+ const b=$('#defender-quick-scan');b.disabled=true;b.textContent='Demande en cours…';
+ try{const r=await window.iconAPI.requestDefenderQuickScan();if(r.ok){toastMessage('Demande transmise à Microsoft Defender. Consultez Sécurité Windows pour suivre l’analyse.');$('#security-state-banner').className='security-state-banner neutral';$('#security-state-banner').innerHTML='<strong>Analyse rapide demandée</strong><span>Windows Defender traite la demande en arrière-plan. Le résultat final sera communiqué par Sécurité Windows.</span>';}else toastMessage(r.message||'Impossible de lancer l’analyse.');}
+ catch(e){toastMessage('Impossible de communiquer avec Microsoft Defender.');}finally{b.disabled=false;b.textContent='Demander une analyse rapide';}
+}
+async function chooseScanFolder(kind){
+ try{const r=await window.iconAPI.chooseScanFolder();if(r.canceled)return;scanSelection[kind]=r;
+ if(kind==='disk'){$('#disk-selected-folder').textContent=r.label;$('#disk-run-scan').disabled=false;}
+ else{$('#hidden-selected-folder').textContent=r.label;$('#hidden-run-scan').disabled=false;}
+ }catch(e){toastMessage('Impossible de sélectionner ce dossier.');}
+}
+function renderDiskScan(r){
+ moduleCache.diskScan=r;$('#disk-files-count').textContent=Number(r.files||0).toLocaleString('fr-FR');$('#disk-folders-count').textContent=Number(r.directories||0).toLocaleString('fr-FR');
+ $('#disk-total-size').textContent=bytes(r.totalBytes);$('#disk-skipped-count').textContent=Number(r.skipped||0).toLocaleString('fr-FR');
+ $('#disk-scan-title').textContent=r.canceled?'Analyse interrompue':'Analyse terminée';$('#disk-progress-bar').style.width=r.canceled?'0%':'100%';
+ $('#disk-progress-text').textContent=r.limitReached?'Limite de sécurité atteinte : résultats partiels.':(r.canceled?'Analyse annulée.':'Analyse terminée · '+shortDate(r.collectedAt));
+ $('#disk-progress-count').textContent=Number(r.scanned||0).toLocaleString('fr-FR')+' éléments parcourus';
+ renderTable('#disk-top-folders',[{label:'Dossier ou fichier',key:'name'},{label:'Fichiers',render:x=>esc(Number(x.files||0).toLocaleString('fr-FR'))},{label:'Espace',render:x=>esc(bytes(x.bytes))}],r.topFolders||[],'Aucun élément accessible.');
+ renderTable('#disk-extensions',[{label:'Extension',key:'extension'},{label:'Espace total',render:x=>esc(bytes(x.bytes))}],r.topExtensions||[],'Aucun fichier trouvé.');
+ renderTable('#disk-largest-files',[{label:'Fichier',key:'name'},{label:'Taille',render:x=>'<strong>'+esc(bytes(x.bytes))+'</strong>'},{label:'Modification',render:x=>esc(shortDate(x.modifiedAt))},{label:'Emplacement',render:x=>'<span class="path-cell" title="'+esc(x.path)+'">'+esc(x.path)+'</span>'}],r.largestFiles||[],'Aucun fichier trouvé.');
+}
+async function runDiskScan(){
+ const s=scanSelection.disk;if(!s?.token||moduleLocks.has('disk'))return;moduleLocks.add('disk');$('#disk-run-scan').disabled=true;$('#disk-cancel-scan').classList.remove('hidden');
+ $('#disk-scan-title').textContent='Analyse du dossier…';$('#disk-progress-bar').style.width='8%';$('#disk-progress-text').textContent='Lecture en mode lecture seule…';$('#disk-progress-count').textContent='Démarrage';
+ try{const r=await window.iconAPI.scanDirectory(s.token);if(!r.ok&&!r.canceled){toastMessage(r.message||'Analyse impossible.');$('#disk-scan-title').textContent='Analyse impossible';}else renderDiskScan(r);}
+ catch(e){console.error('ICON disk:',e);toastMessage('Erreur pendant l’analyse du dossier.');}
+ finally{moduleLocks.delete('disk');$('#disk-run-scan').disabled=false;$('#disk-cancel-scan').classList.add('hidden');}
+}
+async function runHiddenScan(){
+ const s=scanSelection.hidden;if(!s?.token||moduleLocks.has('hidden'))return;moduleLocks.add('hidden');$('#hidden-run-scan').disabled=true;$('#hidden-result-state').textContent='Analyse en cours…';
+ $('#hidden-table').innerHTML='<div class="empty-state">Recherche des attributs Hidden. Cela peut prendre un moment…</div>';
+ try{const r=await window.iconAPI.scanHiddenElements(s.token);if(!r.ok){$('#hidden-result-state').textContent='Non disponible';$('#hidden-table').innerHTML='<div class="empty-state">'+esc(r.message||'Analyse impossible.')+'</div>';return;}
+ moduleCache.hiddenScan=r;$('#hidden-count').textContent=Number(r.count||0).toLocaleString('fr-FR');$('#hidden-shown').textContent=(r.items||[]).length.toLocaleString('fr-FR');$('#hidden-result-state').textContent=r.truncated?'500 premiers résultats':'Analyse terminée';
+ renderTable('#hidden-table',[{label:'Nom',key:'name'},{label:'Type',key:'type'},{label:'Taille',render:x=>esc(x.type==='Fichier'?bytes(x.bytes):'—')},{label:'Attributs',key:'attributes'},{label:'Emplacement',render:x=>'<span class="path-cell" title="'+esc(x.path)+'">'+esc(x.path)+'</span>'}],r.items||[],'Aucun élément caché détecté.');
+ if(r.truncated)toastMessage('Plus de 500 éléments : seuls les 500 premiers sont affichés.');
+ }catch(e){console.error('ICON hidden:',e);toastMessage('Erreur pendant la recherche des éléments cachés.');}finally{moduleLocks.delete('hidden');$('#hidden-run-scan').disabled=false;}
+}
+async function loadNetwork(){
+ if(moduleLocks.has('network'))return;moduleLocks.add('network');$('#network-table').innerHTML='<div class="empty-state">Lecture des interfaces…</div>';
+ try{const r=await window.iconAPI.getNetworkConfiguration();if(!r.supported){$('#network-table').innerHTML='<div class="empty-state">'+esc(r.message||'Non disponible.')+'</div>';return;}
+ moduleCache.network=r.items||[];renderTable('#network-table',[{label:'Interface',key:'name'},{label:'Description',key:'description'},{label:'Réseau',key:'profile'},{label:'Adresse IPv4',key:'ipv4'},{label:'Passerelle',key:'gateway'},{label:'DNS',key:'dns'}],moduleCache.network,'Aucune interface IP configurée.');
+ }catch(e){console.error('ICON network:',e);$('#network-table').innerHTML='<div class="empty-state">Impossible de lire le réseau.</div>';}finally{moduleLocks.delete('network');}
+}
+async function openTool(key){try{const r=await window.iconAPI.openSystemTool(key);toastMessage(r.ok?'Outil Windows ouvert.':r.message||'Impossible d’ouvrir cet outil.');}catch(e){toastMessage('Impossible d’ouvrir cet outil Windows.');}}
+function handleScanProgress(p){
+ if(!p||p.complete)return;$('#disk-scan-title').textContent='Analyse en cours…';$('#disk-progress-bar').style.width='65%';
+ $('#disk-progress-text').textContent=Number(p.files||0).toLocaleString('fr-FR')+' fichiers · '+Number(p.directories||0).toLocaleString('fr-FR')+' dossiers · '+bytes(p.totalBytes);
+ $('#disk-progress-count').textContent=Number(p.scanned||0).toLocaleString('fr-FR')+' éléments';
+}
+function navigate(page){
+ document.querySelectorAll('[data-content-page]').forEach(p=>p.classList.toggle('hidden',p.dataset.contentPage!==page));
+ document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+ const names={home:'Centre de contrôle',pc:'Inventaire matériel',disk:'Analyse disque',processes:'Processus',security:'Sécurité',hidden:'Éléments cachés',apps:'Applications installées',startup:'Démarrage',network:'Réseau',tools:'Outils système'};
+ $('.titlebar-label').textContent=names[page]||'Centre de contrôle';
+ if(page==='pc'&&!hardwareInventory&&!inventoryLock)analysePc();if(page==='processes')loadProcesses();if(page==='security')loadSecurity();
+ if(page==='apps')loadApplications();if(page==='startup')loadStartup();if(page==='network')loadNetwork();
+}
+
 function setupEvents() {
   document.querySelectorAll('[data-window]').forEach(button => {
     button.addEventListener('click', () => {
@@ -480,14 +631,29 @@ function setupEvents() {
     });
   });
   document.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.page)));
-  document.querySelectorAll('[data-feature]').forEach(button => button.addEventListener('click', () =>
-    toastMessage(`Le module « ${button.dataset.feature} » sera construit dans une prochaine étape.`)));
+
   document.querySelectorAll('[data-pc-tab]').forEach(button => button.addEventListener('click', () => selectPcTab(button.dataset.pcTab)));
 
   $('#open-pc-page').addEventListener('click', () => navigate('pc'));
   $('#pc-refresh-button').addEventListener('click', analysePc);
   $('#pc-export-button').addEventListener('click', exportReport);
   $('#refresh-button').addEventListener('click', () => refreshData());
+  $('#disk-choose-folder').addEventListener('click', () => chooseScanFolder('disk'));
+  $('#disk-run-scan').addEventListener('click', runDiskScan);
+  $('#disk-cancel-scan').addEventListener('click', async () => { await window.iconAPI.cancelScan(); });
+  $('#hidden-choose-folder').addEventListener('click', () => chooseScanFolder('hidden'));
+  $('#hidden-run-scan').addEventListener('click', runHiddenScan);
+  $('#process-refresh').addEventListener('click', loadProcesses);
+  $('#process-search').addEventListener('input', renderProcesses);
+  $('#security-refresh').addEventListener('click', loadSecurity);
+  $('#defender-quick-scan').addEventListener('click', requestQuickScan);
+  $('#apps-refresh').addEventListener('click', loadApplications);
+  $('#apps-search').addEventListener('input', renderApplications);
+  $('#startup-refresh').addEventListener('click', loadStartup);
+  $('#startup-search').addEventListener('input', renderStartup);
+  $('#network-refresh').addEventListener('click', loadNetwork);
+  document.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => openTool(b.dataset.tool)));
+  removeScanProgressListener = window.iconAPI.onScanProgress(handleScanProgress);
   $('#open-settings').addEventListener('click', openSettings);
   $('#settings-close').addEventListener('click', closeSettings);
   $('#settings-overlay').addEventListener('click', event => { if (event.target === $('#settings-overlay')) closeSettings(); });

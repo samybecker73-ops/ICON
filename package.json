@@ -2,19 +2,20 @@
   "name": "icon-pc-control",
   "productName": "ICON",
   "version": "0.2.1",
-  "description": "Inventaire matériel et centre de contrôle PC local.",
+  "description": "Centre de contrôle et diagnostic local pour Windows, macOS et Linux.",
   "main": "main.js",
   "author": "ICON",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "build:dir": "electron-builder --dir",
-    "build:win": "electron-builder --win nsis",
-    "build:win:portable": "electron-builder --win portable",
-    "build:mac": "electron-builder --mac dmg zip",
-    "build:linux": "electron-builder --linux AppImage deb",
-    "release:win": "electron-builder --win nsis --publish always"
+    "build:dir": "electron-builder --dir --publish never",
+    "build:win": "electron-builder --win nsis --publish never",
+    "build:win:portable": "electron-builder --win portable --publish never",
+    "build:mac": "electron-builder --mac dmg zip --publish never",
+    "build:linux": "electron-builder --linux AppImage deb --publish never",
+    "release:win": "electron-builder --win nsis --publish always",
+    "test": "node --test tests/*.test.js"
   },
   "devDependencies": {
     "electron": "^45.3.2",
@@ -24,10 +25,19 @@
     "appId": "fr.icon.desktop",
     "productName": "ICON",
     "asar": true,
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "src/**/*", "package.json"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "artifactName": "ICON-Setup-${version}.${ext}"
     },
     "nsis": {
@@ -35,20 +45,42 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ICON"
+      "shortcutName": "ICON",
+      "deleteAppDataOnUninstall": false
     },
-    "mac": { "target": ["dmg", "zip"], "category": "public.app-category.utilities" },
-    "linux": { "target": ["AppImage", "deb"], "category": "Utility" },
-    "publish": [{
-      "provider": "github",
-      "owner": "samybecker73-ops",
-      "repo": "ICON",
-      "releaseType": "release"
-    }]
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities",
+      "artifactName": "ICON-${version}-macOS-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "artifactName": "ICON-${version}-linux-${arch}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "samybecker73-ops",
+        "repo": "ICON",
+        "releaseType": "release"
+      }
+    ]
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/samybecker73-ops/ICON.git"
   },
-  "dependencies": { "electron-updater": "6.8.11" }
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }

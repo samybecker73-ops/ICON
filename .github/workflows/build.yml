@@ -2,7 +2,7 @@ name: ICON Windows build
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'work/**']
   workflow_dispatch:
 
 permissions:
@@ -21,6 +21,8 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Run source contract tests
+        run: npm test
       - name: Build Windows installer
         run: npm run build:win
       - name: Upload installer

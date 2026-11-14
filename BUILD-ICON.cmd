@@ -63,7 +63,15 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/2] Creation de l'installateur Windows...
+echo [TEST] Verification du projet ICON...
+call npm test
+if errorlevel 1 (
+    echo [ERREUR] Les tests du projet ont echoue.
+    pause
+    exit /b 1
+)
+
+echo [2/2] Creation de l'installateur Windows (sans publication)...
 call npm run build:win
 if errorlevel 1 (
     echo [ERREUR] La creation de l'installateur a echoue.

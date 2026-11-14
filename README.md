@@ -1,37 +1,49 @@
-# ICON — Version 0.2.1
+# ICON — chantier de diagnostic local
 
-ICON est un centre de contrôle PC local développé avec Electron. Aucun compte utilisateur ni inscription n'est requis ; les informations système restent sur l'ordinateur.
+ICON est un centre de contrôle PC local développé avec Electron. Aucun compte utilisateur ni inscription n'est requis. Les analyses de dossiers sont déclenchées par l'utilisateur ; elles restent locales jusqu'à un export manuel.
 
-## Fonctions présentes
+## Modules du chantier
 
-- Écran de lancement animé, accueil et visite guidée locale.
-- Mesures CPU et RAM, détection des volumes logiques et actualisation périodique.
-- Inventaire matériel Windows via PowerShell/CIM : système, processeur, GPU, barrettes RAM, carte mère, BIOS, disques, réseau et écrans lorsque Windows fournit ces informations.
-- Export local d'un rapport JSON.
-- Paramètres et vérification, téléchargement et installation des mises à jour GitHub Releases.
+- **Accueil et ressources :** utilisation CPU, RAM, volumes locaux et actualisation automatique.
+- **Inventaire matériel :** système Windows, CPU, GPU, mémoire, carte mère, BIOS, disques physiques, interfaces et écrans.
+- **Analyse disque :** sélection d'un dossier, mesure récursive en lecture seule, poids des dossiers principaux, extensions et 20 fichiers les plus lourds.
+- **Processus :** liste des processus, PID, mémoire, CPU cumulée, threads, handles et recherche.
+- **Sécurité :** informations réellement retournées par Microsoft Defender et le pare-feu Windows, signatures et dates d'analyse disponibles. Possibilité de demander explicitement une analyse rapide à Defender.
+- **Éléments cachés :** fichiers et dossiers marqués Hidden par Windows ou dont le nom commence par un point, dans un dossier choisi.
+- **Applications :** programmes déclarés dans les clés de désinstallation Windows.
+- **Démarrage :** commandes et applications configurées pour démarrer avec la session.
+- **Réseau :** interfaces, profils, IPv4, passerelles et DNS, sans lecture des mots de passe Wi-Fi.
+- **Outils système :** accès direct aux utilitaires et réglages Windows officiels.
 
-## Limites connues
+## Sécurité et limites
 
-L'analyse détaillée de l'espace disque, la liste des processus, la détection des éléments cachés, l'antivirus et l'optimisation restent à construire. ICON n'affiche pas de résultat antivirus fictif. L'inventaire matériel approfondi est actuellement disponible sous Windows.
+Les inventaires et analyses de dossiers sont en lecture seule. ICON ne supprime aucun fichier, ne désactive aucune application et ne termine aucun processus. Les changements système restent sous le contrôle de Windows et de l'utilisateur.
 
-## Lancer localement
+ICON n'est pas un antivirus autonome. Le module Sécurité affiche uniquement les informations retournées par Windows. Une analyse rapide est demandée à Microsoft Defender et son résultat doit être suivi dans Sécurité Windows. Une donnée inconnue ou indisponible n'est jamais présentée comme une protection active.
+
+L'analyse disque est limitée au dossier sélectionné, à 200 000 entrées et à 24 niveaux pour protéger la réactivité. Les liens symboliques sont ignorés. Windows peut refuser l'accès à des éléments ; ils sont comptabilisés comme ignorés. Les résultats de l'analyse des éléments cachés sont limités à 500 lignes affichées.
+
+Les inventaires détaillés (processus, programmes installés, Defender, réseau et démarrage) dépendent des informations fournies par Windows ; certains champs peuvent rester indisponibles.
+
+## Développement local
 
 Prérequis : Node.js 20+ et npm.
 
 ```powershell
 npm install
+npm test
 npm start
 ```
 
 ## Construire l'installateur Windows
 
-Double-clique sur `BUILD-ICON.cmd`. Le setup est généré dans `dist/ICON-Setup-0.2.1.exe`.
+Double-clique sur `BUILD-ICON.cmd`. Le script installe les dépendances, exécute les tests puis construit l'installateur dans `dist/`.
 
-## Publier une version
+**La compilation ne publie rien sur GitHub.** Les commandes de build utilisent explicitement `--publish never`. La publication est une opération distincte, réservée à la branche `main`, et ne sera faite qu'après validation et demande explicite.
 
-1. Augmenter `version` dans `package.json` (par exemple `0.2.2`).
-2. Envoyer les changements sur la branche `main`.
-3. GitHub Actions vérifie si une Release portant ce numéro existe déjà. Si elle n'existe pas, il crée le tag, compile l'installateur Windows et publie automatiquement la GitHub Release.
-4. Les utilisateurs ouvrent **Paramètres → Mises à jour** dans ICON pour vérifier la nouvelle version, la télécharger puis l'installer après validation et redémarrage.
+## Organisation du dépôt
 
-Aucune action manuelle dans l'onglet Actions n'est requise pour les versions suivantes. Le dépôt doit rester public. Le jeton `GITHUB_TOKEN` est utilisé uniquement par GitHub Actions ; aucun jeton personnel n'est intégré à ICON.
+- `main` reste la branche de référence et contient la dernière version publiée.
+- `work/icon-deep-upgrade` est la branche de préparation de ce chantier.
+- Les branches `work/*` exécutent les tests et la compilation sans déclencher une Release.
+- Le workflow de publication n'accepte que la branche `main`.
