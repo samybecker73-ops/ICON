@@ -428,7 +428,9 @@ async function initializeUpdater() {
     $('#update-current-version').textContent = updateInfo.currentVersion || '—';
     if (!updateInfo.supported) updaterStatus({
       state: 'unsupported',
-      message: 'Les mises à jour automatiques seront disponibles dans la version installée d’ICON pour Windows.'
+      message: updateInfo.isPortable
+        ? 'Vous utilisez ICON Portable. Pour mettre à jour, téléchargez la nouvelle version ICON.exe depuis les téléchargements GitHub.'
+        : 'Les mises à jour automatiques seront disponibles dans la version installée d’ICON pour Windows.'
     });
     else if (latestUpdateStatus) updaterStatus(latestUpdateStatus);
   } catch (error) {

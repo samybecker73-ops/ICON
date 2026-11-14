@@ -57,8 +57,12 @@ function sendUpdateStatus(state, details = {}) {
   });
 }
 
+function isPortableMode() {
+  return Boolean(process.env.PORTABLE_EXECUTABLE_DIR || process.env.PORTABLE_EXECUTABLE_FILE);
+}
+
 function updaterSupported() {
-  return app.isPackaged && process.platform === 'win32';
+  return app.isPackaged && process.platform === 'win32' && !isPortableMode();
 }
 
 function configureAutoUpdater() {
@@ -537,6 +541,8 @@ ipcMain.handle('report:export', async (_event, report) => {
 ipcMain.handle('updates:info', () => ({
   currentVersion: app.getVersion(),
   supported: updaterSupported(),
+  isPortable: isPortableMode(),
+  distribution: isPortableMode() ? 'portable' : (app.isPackaged ? 'installed' : 'development'),
   platform: process.platform,
   packaged: app.isPackaged
 }));

@@ -35,9 +35,20 @@ npm test
 npm start
 ```
 
-## Construire l'installateur Windows
+## Télécharger ICON pour Windows
 
-Double-clique sur `BUILD-ICON.cmd`. Le script installe les dépendances, exécute les tests puis construit l'installateur dans `dist/`.
+Deux formats sont prévus dans chaque publication GitHub :
+
+- **ICON-Setup-version.exe** : installateur classique, avec choix du dossier et raccourcis Windows. Cette version conserve les mises à jour automatiques intégrées.
+- **ICON.exe** : version portable en un seul exécutable, sans assistant d'installation. Il suffit de télécharger le fichier et de le lancer. Cette version ne lance pas le service d'auto-update : pour la mettre à jour, télécharge la nouvelle version publiée sur GitHub.
+
+Le fichier portable est un vrai build `portable` electron-builder ; ce n'est pas l'exécutable interne extrait de `win-unpacked`.
+
+## Construire les versions Windows
+
+Double-clique sur `BUILD-ICON.cmd`. Le script installe les dépendances, exécute les tests puis construit l'installateur et le fichier portable dans `dist/` (`ICON-Setup-version.exe` et `ICON.exe`).
+
+Pour construire uniquement le portable : `npm run build:win:portable`.
 
 **La compilation ne publie rien sur GitHub.** Les commandes de build utilisent explicitement `--publish never`. La publication est une opération distincte, réservée à la branche `main`, et ne sera faite qu'après validation et demande explicite.
 

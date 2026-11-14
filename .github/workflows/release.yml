@@ -87,6 +87,6 @@ jobs:
 
       - name: Build and publish GitHub Release
         if: steps.release.outputs.should_publish == 'true'
-        run: npx electron-builder --win nsis --publish always
+        run: npx electron-builder --win nsis portable --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
