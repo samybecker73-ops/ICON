@@ -1,14 +1,14 @@
 @echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title ICON - Creation de l'installateur Windows
+title ICON - Creation des versions Windows
 color 0B
 
 cd /d "%~dp0"
 
 echo.
 echo  ============================================================
-echo                    ICON - BUILD INSTALLATION
+echo                    ICON - BUILD WINDOWS
 echo  ============================================================
 echo.
 
@@ -63,10 +63,18 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/2] Creation de l'installateur Windows...
+echo [TEST] Verification du projet ICON...
+call npm test
+if errorlevel 1 (
+    echo [ERREUR] Les tests du projet ont echoue.
+    pause
+    exit /b 1
+)
+
+echo [2/2] Creation de l'installateur et du portable Windows (sans publication)...
 call npm run build:win
 if errorlevel 1 (
-    echo [ERREUR] La creation de l'installateur a echoue.
+    echo [ERREUR] La creation des versions Windows a echoue.
     pause
     exit /b 1
 )
@@ -80,11 +88,16 @@ echo.
 if exist "dist\ICON-Setup-%APP_VERSION%.exe" (
     echo [OK] Installateur genere :
     echo     %CD%\dist\ICON-Setup-%APP_VERSION%.exe
-    start "" explorer "%CD%\dist"
 ) else (
-    echo [ATTENTION] Verifie les messages de electron-builder.
+    echo [ATTENTION] Installateur introuvable.
 )
-
+if exist "dist\ICON.exe" (
+    echo [OK] Version portable generee :
+    echo     %CD%\dist\ICON.exe
+) else (
+    echo [ATTENTION] Fichier portable introuvable.
+)
+if exist "dist" start "" explorer "%CD%\dist"
 echo.
 pause
 exit /b 0

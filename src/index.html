@@ -35,12 +35,14 @@
       <nav class="main-nav" aria-label="Navigation principale">
         <button class="nav-item active" data-page="home"><span class="nav-icon">⌂</span><span>Accueil</span></button>
         <button class="nav-item" data-page="pc"><span class="nav-icon">▣</span><span>Mon PC</span></button>
-        <button class="nav-item future" data-feature="Analyse disque"><span class="nav-icon">▤</span><span>Analyse disque</span><small>À venir</small></button>
-        <button class="nav-item future" data-feature="Processus"><span class="nav-icon">◫</span><span>Processus</span><small>À venir</small></button>
-        <button class="nav-item future" data-feature="Sécurité"><span class="nav-icon">◇</span><span>Sécurité</span><small>À venir</small></button>
-        <button class="nav-item future" data-feature="Éléments cachés"><span class="nav-icon">◉</span><span>Éléments cachés</span><small>À venir</small></button>
-        <button class="nav-item future" data-feature="Optimisation"><span class="nav-icon">ϟ</span><span>Optimisation</span><small>À venir</small></button>
-        <button class="nav-item future" data-feature="Outils"><span class="nav-icon">▦</span><span>Outils</span><small>À venir</small></button>
+        <button class="nav-item" data-page="disk"><span class="nav-icon">▤</span><span>Analyse disque</span></button>
+        <button class="nav-item" data-page="processes"><span class="nav-icon">◫</span><span>Processus</span></button>
+        <button class="nav-item" data-page="security"><span class="nav-icon">◇</span><span>Sécurité</span></button>
+        <button class="nav-item" data-page="hidden"><span class="nav-icon">◉</span><span>Éléments cachés</span></button>
+        <button class="nav-item" data-page="apps"><span class="nav-icon">▦</span><span>Applications</span></button>
+        <button class="nav-item" data-page="startup"><span class="nav-icon">ϟ</span><span>Démarrage</span></button>
+        <button class="nav-item" data-page="network"><span class="nav-icon">⌁</span><span>Réseau</span></button>
+        <button class="nav-item" data-page="tools"><span class="nav-icon">⚙</span><span>Outils système</span></button>
       </nav>
       <div class="sidebar-bottom">
         <button class="nav-item subtle" id="replay-tour"><span class="nav-icon">?</span><span>Visite guidée</span></button>
@@ -59,7 +61,7 @@
         </div>
       </header>
 
-      <main class="dashboard" id="dashboard">
+      <main class="dashboard" id="dashboard" data-content-page="home">
         <div class="page-heading">
           <div>
             <div class="eyebrow">VUE D’ENSEMBLE</div>
@@ -128,8 +130,8 @@
 
         <section class="bottom-grid">
           <article class="panel security-preview">
-            <div class="panel-heading"><div><div class="eyebrow">PROTECTION</div><h2>État de sécurité</h2></div><span class="status-pill status-pending">Non analysé</span></div>
-            <p>Le moteur d’analyse antivirus et de détection des éléments suspects n’est pas encore intégré.</p>
+            <div class="panel-heading"><div><div class="eyebrow">PROTECTION</div><h2>État de sécurité</h2></div><button class="text-button" data-page="security">Ouvrir →</button></div>
+            <p>ICON lit les informations communiquées par Microsoft Defender et le pare-feu Windows. La protection affichée n’est jamais supposée active sans vérification.</p>
             <div class="security-note"><span>i</span><span>ICON ne déclarera pas un PC sain avant d’avoir effectué une véritable analyse de sécurité.</span></div>
           </article>
           <article class="panel next-panel">
@@ -141,7 +143,7 @@
         <footer class="dashboard-footer"><span>ICON · Centre de contrôle PC</span><span id="last-updated">Données locales · En attente</span></footer>
       </main>
 
-      <main class="dashboard pc-page hidden" id="pc-page">
+      <main class="dashboard pc-page hidden" id="pc-page" data-content-page="pc">
         <div class="page-heading">
           <div>
             <div class="eyebrow">INVENTAIRE MATÉRIEL</div>
@@ -218,6 +220,76 @@
         </section>
 
         <footer class="dashboard-footer"><span>ICON · Inventaire matériel local</span><span id="pc-last-updated">Aucune analyse effectuée</span></footer>
+      </main>
+
+      <main class="dashboard module-page hidden" id="disk-page" data-content-page="disk">
+        <div class="page-heading"><div><div class="eyebrow">STOCKAGE · EXPLORATION</div><h1>Analyse disque.</h1><p>Mesurez l’espace utilisé par les dossiers et repérez les fichiers les plus volumineux.</p></div><div class="heading-actions"><button class="button button-secondary" id="disk-choose-folder">Choisir un dossier</button><button class="button button-primary" id="disk-run-scan" disabled>Lancer l’analyse</button></div></div>
+        <section class="module-context panel"><div><span class="eyebrow">DOSSIER SÉLECTIONNÉ</span><strong id="disk-selected-folder">Aucun dossier sélectionné</strong></div><span class="module-local-tag">LECTURE SEULE</span></section>
+        <section class="panel scan-progress-panel"><div class="module-heading"><div><div class="eyebrow">ANALYSE EN COURS</div><h2 id="disk-scan-title">Prêt à analyser</h2></div><button class="button button-quiet hidden" id="disk-cancel-scan">Annuler</button></div><div class="scan-progress-track"><span id="disk-progress-bar"></span></div><div class="scan-progress-meta"><span id="disk-progress-text">Choisissez un dossier pour commencer.</span><span id="disk-progress-count">—</span></div></section>
+        <section class="module-stats-grid"><article class="module-stat"><span>Fichiers analysés</span><strong id="disk-files-count">—</strong><small>Dans le dossier sélectionné</small></article><article class="module-stat"><span>Dossiers analysés</span><strong id="disk-folders-count">—</strong><small>Sous-dossiers parcourus</small></article><article class="module-stat"><span>Espace total</span><strong id="disk-total-size">—</strong><small>Somme des fichiers accessibles</small></article><article class="module-stat"><span>Éléments ignorés</span><strong id="disk-skipped-count">—</strong><small>Accès refusé ou liens ignorés</small></article></section>
+        <section class="content-grid"><article class="panel"><div class="panel-heading"><div><div class="eyebrow">RÉPARTITION</div><h2>Poids des dossiers principaux</h2></div></div><div id="disk-top-folders" class="module-table-wrap"><div class="empty-state">Aucune analyse effectuée.</div></div></article><article class="panel"><div class="panel-heading"><div><div class="eyebrow">FORMATS</div><h2>Types de fichiers les plus lourds</h2></div></div><div id="disk-extensions" class="module-table-wrap"><div class="empty-state">Aucune analyse effectuée.</div></div></article></section>
+        <section class="panel"><div class="panel-heading"><div><div class="eyebrow">FICHIERS VOLUMINEUX</div><h2>Les 20 plus gros fichiers</h2></div></div><div id="disk-largest-files" class="module-table-wrap"><div class="empty-state">Aucune analyse effectuée.</div></div></section>
+        <p class="module-disclaimer">ICON analyse uniquement le dossier sélectionné. Les liens symboliques sont ignorés, aucune donnée n’est supprimée et les dossiers inaccessibles sont comptabilisés séparément.</p>
+      </main>
+
+      <main class="dashboard module-page hidden" id="processes-page" data-content-page="processes">
+        <div class="page-heading"><div><div class="eyebrow">ACTIVITÉ EN DIRECT</div><h1>Processus.</h1><p>Consultez les processus actuellement exécutés et leur consommation mémoire.</p></div><div class="heading-actions"><button class="button button-secondary" id="process-refresh">Actualiser</button></div></div>
+        <section class="module-stats-grid compact"><article class="module-stat"><span>Processus actifs</span><strong id="process-count">—</strong><small>Gestionnaire Windows</small></article><article class="module-stat"><span>Mémoire cumulée</span><strong id="process-memory">—</strong><small>Espaces de travail rapportés</small></article><article class="module-stat"><span>Threads</span><strong id="process-threads">—</strong><small>Threads rapportés</small></article></section>
+        <section class="panel"><div class="module-toolbar"><div><div class="eyebrow">LISTE DES PROCESSUS</div><h2>Activité du système</h2></div><input class="module-search" id="process-search" type="search" placeholder="Rechercher un processus…" autocomplete="off"></div><div id="process-table" class="module-table-wrap"><div class="empty-state">Ouvrez ce module pour charger les processus.</div></div></section>
+        <p class="module-disclaimer">Vue informative en lecture seule : ICON ne termine aucun processus.</p>
+      </main>
+
+      <main class="dashboard module-page hidden" id="security-page" data-content-page="security">
+        <div class="page-heading"><div><div class="eyebrow">PROTECTION WINDOWS</div><h1>Sécurité.</h1><p>État réel rapporté par Microsoft Defender et le pare-feu Windows.</p></div><div class="heading-actions"><button class="button button-secondary" id="security-refresh">Actualiser l’état</button><button class="button button-primary" id="defender-quick-scan">Demander une analyse rapide</button></div></div>
+        <div class="security-state-banner neutral" id="security-state-banner"><strong>État non vérifié</strong><span>Lancez une lecture de la sécurité Windows.</span></div>
+        <section class="module-stats-grid" id="security-cards"><article class="module-stat"><span>Antivirus</span><strong>—</strong><small>En attente</small></article><article class="module-stat"><span>Protection temps réel</span><strong>—</strong><small>En attente</small></article><article class="module-stat"><span>Pare-feu</span><strong>—</strong><small>En attente</small></article><article class="module-stat"><span>Signatures</span><strong>—</strong><small>En attente</small></article></section>
+        <section class="content-grid"><article class="panel"><div class="panel-heading"><div><div class="eyebrow">MICROSOFT DEFENDER</div><h2>Protection antivirus</h2></div></div><div id="security-defender-details" class="pc-data-list"><div class="empty-state">En attente de la lecture.</div></div></article><article class="panel"><div class="panel-heading"><div><div class="eyebrow">PARE-FEU WINDOWS</div><h2>Profils réseau</h2></div></div><div id="security-firewall-details" class="pc-data-list"><div class="empty-state">En attente de la lecture.</div></div></article></section>
+        <div class="security-note module-security-note"><strong>Important</strong><span>ICON ne remplace pas un antivirus. Une analyse rapide est transmise à Microsoft Defender et son résultat doit être confirmé dans Sécurité Windows. Une donnée inconnue n’est jamais considérée comme une protection active.</span></div>
+      </main>
+
+      <main class="dashboard module-page hidden" id="hidden-page" data-content-page="hidden">
+        <div class="page-heading"><div><div class="eyebrow">EXPLORATION AVANCÉE</div><h1>Éléments cachés.</h1><p>Repérez les fichiers et dossiers marqués comme cachés dans un emplacement choisi.</p></div><div class="heading-actions"><button class="button button-secondary" id="hidden-choose-folder">Choisir un dossier</button><button class="button button-primary" id="hidden-run-scan" disabled>Analyser les éléments</button></div></div>
+        <section class="module-context panel"><div><span class="eyebrow">EMPLACEMENT SÉLECTIONNÉ</span><strong id="hidden-selected-folder">Aucun dossier sélectionné</strong></div><span class="module-local-tag">LECTURE SEULE</span></section>
+        <section class="module-stats-grid compact"><article class="module-stat"><span>Éléments cachés trouvés</span><strong id="hidden-count">—</strong><small>Fichiers et dossiers</small></article><article class="module-stat"><span>Résultats affichés</span><strong id="hidden-shown">—</strong><small>Maximum 500 éléments</small></article></section>
+        <section class="panel"><div class="panel-heading"><div><div class="eyebrow">RÉSULTATS</div><h2>Éléments détectés</h2></div><span class="module-local-tag" id="hidden-result-state">Non analysé</span></div><div id="hidden-table" class="module-table-wrap"><div class="empty-state">Choisissez un dossier puis lancez l’analyse.</div></div></section>
+        <p class="module-disclaimer">Des fichiers système cachés sont normaux : leur présence n’indique pas une infection.</p>
+      </main>
+
+      <main class="dashboard module-page hidden" id="apps-page" data-content-page="apps">
+        <div class="page-heading"><div><div class="eyebrow">LOGICIELS INSTALLÉS</div><h1>Applications.</h1><p>Inventaire des programmes déclarés dans le registre Windows.</p></div><div class="heading-actions"><button class="button button-secondary" id="apps-refresh">Actualiser les applications</button></div></div>
+        <section class="module-stats-grid compact"><article class="module-stat"><span>Applications trouvées</span><strong id="apps-count">—</strong><small>Entrées du registre</small></article><article class="module-stat"><span>Éditeurs identifiés</span><strong id="apps-publishers">—</strong><small>Éditeurs distincts</small></article></section>
+        <section class="panel"><div class="module-toolbar"><div><div class="eyebrow">INVENTAIRE</div><h2>Programmes installés</h2></div><input class="module-search" id="apps-search" type="search" placeholder="Rechercher une application…" autocomplete="off"></div><div id="apps-table" class="module-table-wrap"><div class="empty-state">Ouvrez ce module pour charger les applications.</div></div></section>
+        <p class="module-disclaimer">Les applications portables ou certaines applications du Store peuvent ne pas apparaître dans le registre.</p>
+      </main>
+
+      <main class="dashboard module-page hidden" id="startup-page" data-content-page="startup">
+        <div class="page-heading"><div><div class="eyebrow">LANCEMENT DE WINDOWS</div><h1>Démarrage.</h1><p>Visualisez les applications et commandes configurées au démarrage de la session.</p></div><div class="heading-actions"><button class="button button-secondary" id="startup-refresh">Actualiser</button><button class="button button-primary" data-tool="startup">Gérer dans Windows</button></div></div>
+        <section class="module-stats-grid compact"><article class="module-stat"><span>Entrées de démarrage</span><strong id="startup-count">—</strong><small>Déclarées par Windows</small></article><article class="module-stat"><span>Utilisateurs / contextes</span><strong id="startup-users">—</strong><small>Comptes distincts rapportés</small></article></section>
+        <section class="panel"><div class="module-toolbar"><div><div class="eyebrow">DÉMARRAGE AUTOMATIQUE</div><h2>Éléments configurés</h2></div><input class="module-search" id="startup-search" type="search" placeholder="Rechercher une entrée…" autocomplete="off"></div><div id="startup-table" class="module-table-wrap"><div class="empty-state">Ouvrez ce module pour charger les entrées.</div></div></section>
+        <p class="module-disclaimer">ICON ne désactive aucune application automatiquement.</p>
+      </main>
+
+      <main class="dashboard module-page hidden" id="network-page" data-content-page="network">
+        <div class="page-heading"><div><div class="eyebrow">CONNECTIVITÉ</div><h1>Réseau.</h1><p>Consultez les interfaces et paramètres IP communiqués par Windows.</p></div><div class="heading-actions"><button class="button button-secondary" id="network-refresh">Actualiser</button><button class="button button-primary" data-tool="network">Paramètres réseau</button></div></div>
+        <section class="panel"><div class="panel-heading"><div><div class="eyebrow">ADAPTATEURS CONFIGURÉS</div><h2>Interfaces réseau</h2></div></div><div id="network-table" class="module-table-wrap"><div class="empty-state">Ouvrez ce module pour charger les interfaces.</div></div></section>
+        <p class="module-disclaimer">Aucun mot de passe Wi-Fi ni clé réseau n’est lu.</p>
+      </main>
+
+      <main class="dashboard module-page hidden" id="tools-page" data-content-page="tools">
+        <div class="page-heading"><div><div class="eyebrow">UTILITAIRES WINDOWS</div><h1>Outils système.</h1><p>Accédez directement aux utilitaires officiels de Windows.</p></div></div>
+        <section class="tool-grid">
+          <button class="tool-card" data-tool="taskManager"><span>◫</span><strong>Gestionnaire des tâches</strong><small>Processus et performances</small></button>
+          <button class="tool-card" data-tool="resourceMonitor"><span>▥</span><strong>Moniteur de ressources</strong><small>Activité CPU, mémoire, disque et réseau</small></button>
+          <button class="tool-card" data-tool="systemInformation"><span>▣</span><strong>Informations système</strong><small>Configuration Windows détaillée</small></button>
+          <button class="tool-card" data-tool="deviceManager"><span>⌘</span><strong>Gestionnaire de périphériques</strong><small>Pilotes et composants matériels</small></button>
+          <button class="tool-card" data-tool="diskCleanup"><span>▤</span><strong>Nettoyage de disque</strong><small>Utilitaire Windows avec validation</small></button>
+          <button class="tool-card" data-tool="windowsUpdate"><span>↻</span><strong>Windows Update</strong><small>Vérifier les mises à jour système</small></button>
+          <button class="tool-card" data-tool="storage"><span>▧</span><strong>Paramètres de stockage</strong><small>Espace disque et assistant stockage</small></button>
+          <button class="tool-card" data-tool="security"><span>◇</span><strong>Sécurité Windows</strong><small>Protection antivirus et pare-feu</small></button>
+          <button class="tool-card" data-tool="apps"><span>▦</span><strong>Applications installées</strong><small>Modifier ou désinstaller un programme</small></button>
+          <button class="tool-card" data-tool="display"><span>▣</span><strong>Paramètres d’affichage</strong><small>Résolution et écrans</small></button>
+        </section>
+        <div class="security-note module-security-note"><strong>Contrôle utilisateur</strong><span>Aucun réglage, nettoyage ou changement système n’est exécuté automatiquement.</span></div>
       </main>
     </section>
   </div>

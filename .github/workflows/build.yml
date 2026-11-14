@@ -2,7 +2,7 @@ name: ICON Windows build
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'work/**']
   workflow_dispatch:
 
 permissions:
@@ -21,12 +21,21 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Build Windows installer
+      - name: Run source contract tests
+        run: npm test
+      - name: Build Windows installer and portable executable
         run: npm run build:win
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
           name: ICON-Windows-Installer
           path: dist/ICON-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload portable executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: ICON-Windows-Portable
+          path: dist/ICON.exe
           if-no-files-found: error
           retention-days: 14
