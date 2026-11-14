@@ -1,0 +1,54 @@
+{
+  "name": "icon-pc-control",
+  "productName": "ICON",
+  "version": "0.2.1",
+  "description": "Inventaire matériel et centre de contrôle PC local.",
+  "main": "main.js",
+  "author": "ICON",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:dir": "electron-builder --dir",
+    "build:win": "electron-builder --win nsis",
+    "build:win:portable": "electron-builder --win portable",
+    "build:mac": "electron-builder --mac dmg zip",
+    "build:linux": "electron-builder --linux AppImage deb",
+    "release:win": "electron-builder --win nsis --publish always"
+  },
+  "devDependencies": {
+    "electron": "^45.3.2",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "fr.icon.desktop",
+    "productName": "ICON",
+    "asar": true,
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "src/**/*", "package.json"],
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "ICON-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ICON"
+    },
+    "mac": { "target": ["dmg", "zip"], "category": "public.app-category.utilities" },
+    "linux": { "target": ["AppImage", "deb"], "category": "Utility" },
+    "publish": [{
+      "provider": "github",
+      "owner": "samybecker73-ops",
+      "repo": "ICON",
+      "releaseType": "release"
+    }]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samybecker73-ops/ICON.git"
+  },
+  "dependencies": { "electron-updater": "6.8.11" }
+}
