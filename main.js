@@ -136,7 +136,7 @@ function getBaseInfo() {
     release: os.release(),
     versionName: os.platform() === 'win32' && typeof os.version === 'function'
       ? os.version()
-      : (os.platform() === 'darwin' ? \`macOS \${os.release()}\` : \`\${os.type()} \${os.release()}\`),
+      : (os.platform() === 'darwin' ? `macOS ${os.release()}` : `${os.type()} ${os.release()}`),
     arch: os.arch(),
     type: os.type(),
     cpuModel: cpuList[0]?.model || 'Modèle non communiqué',
@@ -251,7 +251,7 @@ async function getDiskInfo() {
 }
 
 async function getWindowsHardwareDetails() {
-  const script = String.raw\`
+  const script = String.raw`
 $ErrorActionPreference = 'Stop'
 function Read-Cim([string]$ClassName, [string[]]$Properties, [string]$Filter = '') {
   try {
@@ -274,7 +274,7 @@ $result = [ordered]@{
   monitors = Read-Cim 'Win32_DesktopMonitor' @('Name','ScreenWidth','ScreenHeight','MonitorManufacturer')
 }
 $result | ConvertTo-Json -Depth 6 -Compress
-\`;
+`;
 
   const { stdout } = await execFileAsync('powershell.exe', [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script
@@ -322,7 +322,7 @@ ipcMain.handle('system:details', () => getSystemDetails());
 ipcMain.handle('report:export', async (_event, report) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Exporter le rapport système',
-    defaultPath: \`ICON-rapport-\${new Date().toISOString().slice(0, 10)}.json\`,
+    defaultPath: `ICON-rapport-${new Date().toISOString().slice(0, 10)}.json`,
     filters: [{ name: 'Rapport JSON', extensions: ['json'] }]
   });
   if (result.canceled || !result.filePath) return { canceled: true };
