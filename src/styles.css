@@ -84,3 +84,13 @@ button:disabled{opacity:.42;cursor:not-allowed!important;transform:none!importan
 .discord-link-copy small{color:#929caf;font-size:8px;line-height:1.2;white-space:nowrap}
 .discord-link-arrow{flex:0 0 auto;color:#aeb8ff;font-size:15px;line-height:1}
 @media(max-height:780px){.sidebar{padding-top:18px;padding-bottom:12px}.brand-block{padding-bottom:22px}.nav-item{min-height:39px}.main-nav{gap:3px}.discord-link{min-height:42px;margin-bottom:6px}.sidebar-version{margin-top:10px}}
+
+
+/* Read-only diagnostics workspace */
+.diagnostics-event-level{display:inline-flex;align-items:center;padding:4px 6px;border:1px solid #454d58;border-radius:4px;color:#cbd2da;font-size:9px;white-space:nowrap}
+.diagnostics-event-level.critical{border-color:#754b4b;background:rgba(154,72,72,.13);color:#e5baba}
+.diagnostics-event-level.error{border-color:#665343;background:rgba(140,100,60,.12);color:#ddc3a3}
+.diagnostics-event-message{display:block;max-width:480px;color:#aab3be;line-height:1.5;overflow-wrap:anywhere}
+#diagnostics-device-summary,#diagnostics-events-summary{margin:0 0 12px}
+#diagnostics-state{margin-bottom:14px}
+@media(max-width:760px){.diagnostics-event-message{max-width:240px}}

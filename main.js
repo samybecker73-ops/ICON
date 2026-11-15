@@ -502,6 +502,179 @@ Get-ChildItem -LiteralPath $root -Force -Recurse -ErrorAction SilentlyContinue |
   catch(error){return {ok:false,message:String(error?.message||'Analyse des éléments cachés impossible.').slice(0,400)};}
 }
 
+
+async function getDiagnostics() {
+  if (process.platform !== 'win32') {
+    return {
+      supported: false,
+      message: 'Les diagnostics batterie, périphériques et événements sont disponibles sous Windows.',
+      collectedAt: new Date().toISOString(),
+      battery: null,
+      batteryCount: 0,
+      devices: { totalCount: 0, errorCount: 0, errors: [], truncated: false },
+      events: { windowDays: 7, criticalCount: 0, errorCount: 0, totalCount: 0, items: [], logsRead: 0, truncated: false }
+    };
+  }
+
+  const script = String.raw\`
+$ErrorActionPreference = 'SilentlyContinue'
+$collectedAt = [DateTime]::UtcNow.ToString('o')
+$since = (Get-Date).AddDays(-7)
+
+$batteries = @()
+try { $batteries = @(Get-CimInstance -ClassName Win32_Battery -ErrorAction Stop) } catch {}
+$battery = $null
+if ($batteries.Count -gt 0) {
+  $item = $batteries[0]
+  $designed = $null
+  $full = $null
+  try {
+    $staticData = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryStaticData -ErrorAction Stop)
+    if ($staticData.Count -gt 0 -and [int64]$staticData[0].DesignedCapacity -gt 0) {
+      $designed = [int64]$staticData[0].DesignedCapacity
+    }
+  } catch {}
+  try {
+    $fullData = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryFullChargedCapacity -ErrorAction Stop)
+    if ($fullData.Count -gt 0 -and [int64]$fullData[0].FullChargedCapacity -gt 0) {
+      $full = [int64]$fullData[0].FullChargedCapacity
+    }
+  } catch {}
+  $health = $null
+  if ($designed -gt 0 -and $full -gt 0) {
+    $health = [Math]::Round(($full / $designed) * 100, 1)
+  }
+  $charge = $null
+  if ($null -ne $item.EstimatedChargeRemaining) {
+    $charge = [Math]::Max(0, [Math]::Min(100, [int]$item.EstimatedChargeRemaining))
+  }
+  $runtime = $null
+  if ($null -ne $item.EstimatedRunTime -and [int64]$item.EstimatedRunTime -gt 0 -and [int64]$item.EstimatedRunTime -lt 71582788) {
+    $runtime = [int64]$item.EstimatedRunTime
+  }
+  $battery = [ordered]@{
+    name = [string]$item.Name
+    chargePercent = $charge
+    statusCode = if ($null -ne $item.BatteryStatus) { [int]$item.BatteryStatus } else { $null }
+    estimatedMinutes = $runtime
+    designedCapacity = $designed
+    fullChargeCapacity = $full
+    healthPercent = $health
+    chemistryCode = if ($null -ne $item.Chemistry) { [int]$item.Chemistry } else { $null }
+  }
+}
+
+$allDevices = @()
+try { $allDevices = @(Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction Stop) } catch {}
+$problemDescriptions = @{
+  1 = 'Configuration incorrecte'
+  10 = 'Le périphérique ne peut pas démarrer'
+  12 = 'Ressources insuffisantes'
+  14 = 'Redémarrage nécessaire'
+  22 = 'Périphérique désactivé'
+  28 = 'Pilote non installé'
+  31 = 'Windows ne peut pas charger le pilote'
+  37 = 'Pilote impossible à initialiser'
+  39 = 'Pilote manquant ou endommagé'
+  43 = 'Windows a arrêté le périphérique'
+  45 = 'Périphérique non connecté'
+  48 = 'Pilote bloqué'
+  52 = 'Signature du pilote non vérifiée'
+}
+$problemDevices = @($allDevices | Where-Object {
+  $null -ne $_.ConfigManagerErrorCode -and [int]$_.ConfigManagerErrorCode -ne 0
+})
+$deviceRows = @($problemDevices | Select-Object -First 80 | ForEach-Object {
+  $code = [int]$_.ConfigManagerErrorCode
+  $description = $problemDescriptions[$code]
+  if ([string]::IsNullOrWhiteSpace($description)) { $description = 'Code de problème Windows' }
+  [pscustomobject]@{
+    name = [string]$_.Name
+    class = [string]$_.PNPClass
+    manufacturer = [string]$_.Manufacturer
+    status = [string]$_.Status
+    errorCode = $code
+    description = $description
+  }
+})
+
+$eventRows = [System.Collections.Generic.List[object]]::new()
+$criticalCount = 0
+$errorCount = 0
+$logsRead = 0
+$eventsTruncated = $false
+foreach ($logName in @('System', 'Application')) {
+  try {
+    $logItems = @(Get-WinEvent -FilterHashtable @{ LogName = $logName; StartTime = $since; Level = 1,2 } -MaxEvents 150 -ErrorAction Stop)
+    $logsRead++
+    foreach ($entry in $logItems) {
+      if ([int]$entry.Level -eq 1) { $criticalCount++ } else { $errorCount++ }
+      if ($eventRows.Count -lt 300) {
+        $message = [string]$entry.Message
+        $message = $message -replace '\s+', ' '
+        if ($message.Length -gt 360) { $message = $message.Substring(0, 360) + '…' }
+        $eventRows.Add([pscustomobject]@{
+          time = if ($entry.TimeCreated) { $entry.TimeCreated.ToUniversalTime().ToString('o') } else { $null }
+          level = if ([int]$entry.Level -eq 1) { 'Critique' } else { 'Erreur' }
+          eventId = [int]$entry.Id
+          source = [string]$entry.ProviderName
+          log = [string]$entry.LogName
+          message = $message
+        })
+      }
+    }
+    if ($logItems.Count -ge 150) { $eventsTruncated = $true }
+  } catch {}
+}
+$latestEvents = @($eventRows | Sort-Object time -Descending | Select-Object -First 100)
+
+[ordered]@{
+  supported = $true
+  collectedAt = $collectedAt
+  battery = $battery
+  batteryCount = $batteries.Count
+  devices = [ordered]@{
+    totalCount = $allDevices.Count
+    errorCount = $problemDevices.Count
+    errors = $deviceRows
+    truncated = ($problemDevices.Count -gt $deviceRows.Count)
+  }
+  events = [ordered]@{
+    windowDays = 7
+    criticalCount = $criticalCount
+    errorCount = $errorCount
+    totalCount = ($criticalCount + $errorCount)
+    items = $latestEvents
+    logsRead = $logsRead
+    truncated = $eventsTruncated
+    maxPerLog = 150
+  }
+} | ConvertTo-Json -Depth 7 -Compress
+\`;
+
+  try {
+    return await runPowerShellJson(script, 60000, 12 * 1024 * 1024) || {
+      supported: false,
+      message: 'Windows n’a retourné aucune donnée de diagnostic.',
+      collectedAt: new Date().toISOString(),
+      battery: null,
+      batteryCount: 0,
+      devices: { totalCount: 0, errorCount: 0, errors: [], truncated: false },
+      events: { windowDays: 7, criticalCount: 0, errorCount: 0, totalCount: 0, items: [], logsRead: 0, truncated: false }
+    };
+  } catch (error) {
+    return {
+      supported: false,
+      message: String(error?.message || 'Lecture des diagnostics impossible.').slice(0, 400),
+      collectedAt: new Date().toISOString(),
+      battery: null,
+      batteryCount: 0,
+      devices: { totalCount: 0, errorCount: 0, errors: [], truncated: false },
+      events: { windowDays: 7, criticalCount: 0, errorCount: 0, totalCount: 0, items: [], logsRead: 0, truncated: false }
+    };
+  }
+}
+
 async function openSystemTool(toolKey) {
  const settings={windowsUpdate:'ms-settings:windowsupdate',storage:'ms-settings:storagesense',startup:'ms-settings:startupapps',security:'ms-settings:windowsdefender',apps:'ms-settings:appsfeatures',display:'ms-settings:display',network:'ms-settings:network-status'};
  if(settings[toolKey]){try{await shell.openExternal(settings[toolKey]);return {ok:true};}catch(error){return {ok:false,message:String(error?.message||'Impossible d’ouvrir ce réglage.')};}}
@@ -518,6 +691,7 @@ ipcMain.handle('system:disks', () => getDiskInfo());
 ipcMain.handle('system:details', () => getSystemDetails());
 ipcMain.handle('system:processes', () => getProcessList());
 ipcMain.handle('system:network', () => getNetworkConfiguration());
+ipcMain.handle('diagnostics:run', () => getDiagnostics());
 ipcMain.handle('apps:installed', () => getInstalledApplications());
 ipcMain.handle('apps:startup', () => getStartupApplications());
 ipcMain.handle('security:status', () => getWindowsSecurityStatus());

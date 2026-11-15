@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('iconAPI', {
   getSystemDetails: () => ipcRenderer.invoke('system:details'),
   getProcesses: () => ipcRenderer.invoke('system:processes'),
   getNetworkConfiguration: () => ipcRenderer.invoke('system:network'),
+  getDiagnostics: () => ipcRenderer.invoke('diagnostics:run'),
   getInstalledApplications: () => ipcRenderer.invoke('apps:installed'),
   getStartupApplications: () => ipcRenderer.invoke('apps:startup'),
   getSecurityStatus: () => ipcRenderer.invoke('security:status'),

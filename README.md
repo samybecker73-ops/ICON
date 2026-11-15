@@ -15,6 +15,12 @@ ICON est un centre de contrôle PC local développé avec Electron. Aucun compte
 - **Réseau :** interfaces, profils, IPv4, passerelles et DNS, sans lecture des mots de passe Wi-Fi.
 - **Outils système :** accès direct aux utilitaires et réglages Windows officiels.
 
+## Diagnostics Windows
+
+Le module **Diagnostics** lit, en mode lecture seule, l’état de la batterie lorsqu’un portable en expose une, les codes d’erreur des périphériques Plug-and-Play et les événements Critique/Erreur des journaux Système et Application sur les 7 derniers jours. La lecture est limitée à 150 événements par journal et à 100 résultats affichés. L’absence de batterie est normale sur un PC fixe.
+
+Les journaux Windows peuvent contenir des noms d’appareils, des chemins ou d’autres éléments propres à l’ordinateur. Le rapport reste local jusqu’à l’export manuel : vérifiez son contenu avant de le transmettre. Les événements détectés ne constituent pas à eux seuls un verdict de panne ou de sécurité.
+
 ## Sécurité et limites
 
 Les inventaires et analyses de dossiers sont en lecture seule. ICON ne supprime aucun fichier, ne désactive aucune application et ne termine aucun processus. Les changements système restent sous le contrôle de Windows et de l'utilisateur.
@@ -59,6 +65,6 @@ Pour construire uniquement le portable : `npm run build:win:portable`.
 ## Organisation du dépôt
 
 - `main` reste la branche de référence et contient la dernière version publiée.
-- `work/icon-deep-upgrade` est la branche de préparation de ce chantier.
+- Les chantiers sont préparés sur des branches `work/*` avant toute intégration.
 - Les branches `work/*` exécutent les tests et la compilation sans déclencher une Release.
 - Le workflow de publication n'accepte que la branche `main`.

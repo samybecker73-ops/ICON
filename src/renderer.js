@@ -12,7 +12,7 @@ let refreshLock = false;
 let inventoryLock = false;
 let activeTour = 0;
 let toastTimer;
-const moduleCache={processes:[],applications:[],startup:[],security:null,network:[],diskScan:null,hiddenScan:null};
+const moduleCache={processes:[],applications:[],startup:[],security:null,network:[],diagnostics:null,diskScan:null,hiddenScan:null};
 const scanSelection={disk:null,hidden:null};
 const moduleLocks=new Set();
 let removeScanProgressListener=null;
@@ -602,6 +602,117 @@ async function runHiddenScan(){
  if(r.truncated)toastMessage('Plus de 500 éléments : seuls les 500 premiers sont affichés.');
  }catch(e){console.error('ICON hidden:',e);toastMessage('Erreur pendant la recherche des éléments cachés.');}finally{moduleLocks.delete('hidden');$('#hidden-run-scan').disabled=false;}
 }
+
+function batteryStatusLabel(code) {
+  const labels = {
+    1: 'Autre état', 2: 'Inconnu', 3: 'Complètement chargée', 4: 'Faible',
+    5: 'Critique', 6: 'En charge', 7: 'En charge · niveau élevé',
+    8: 'En charge · niveau faible', 9: 'En charge · niveau critique',
+    10: 'État non défini', 11: 'Partiellement chargée'
+  };
+  return labels[Number(code)] || 'Non communiqué';
+}
+function renderDiagnosticsBattery(battery, batteryCount) {
+  if (!battery) {
+    $('#diagnostics-battery-charge').textContent = 'N/D';
+    $('#diagnostics-battery-caption').textContent = batteryCount ? 'Informations batterie indisponibles' : 'Aucune batterie détectée';
+    $('#diagnostics-battery-health').textContent = 'N/D';
+    $('#diagnostics-battery-details').innerHTML = '<div class="empty-state">Aucune batterie compatible n’a été détectée. C’est normal sur un ordinateur fixe.</div>';
+    return;
+  }
+  const charge = Number.isFinite(Number(battery.chargePercent)) ? Number(battery.chargePercent) : null;
+  const health = Number.isFinite(Number(battery.healthPercent)) ? Number(battery.healthPercent) : null;
+  $('#diagnostics-battery-charge').textContent = charge === null ? '—' : charge.toLocaleString('fr-FR') + ' %';
+  $('#diagnostics-battery-caption').textContent = batteryStatusLabel(battery.statusCode);
+  $('#diagnostics-battery-health').textContent = health === null ? '—' : health.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %';
+  $('#diagnostics-battery-details').innerHTML = rows([
+    ['Modèle', battery.name],
+    ['État rapporté par Windows', batteryStatusLabel(battery.statusCode)],
+    ['Charge actuelle', charge === null ? null : charge + ' %'],
+    ['Autonomie estimée', Number.isFinite(Number(battery.estimatedMinutes)) ? duration(Number(battery.estimatedMinutes) * 60) : null],
+    ['Capacité d’origine', Number.isFinite(Number(battery.designedCapacity)) ? Number(battery.designedCapacity).toLocaleString('fr-FR') + ' mWh' : null],
+    ['Capacité pleine charge', Number.isFinite(Number(battery.fullChargeCapacity)) ? Number(battery.fullChargeCapacity).toLocaleString('fr-FR') + ' mWh' : null],
+    ['Capacité restante estimée', health === null ? null : health.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %']
+  ]);
+}
+function renderDiagnosticsDevices(devices) {
+  const errors = devices?.errors || [];
+  const count = Number(devices?.errorCount || 0);
+  $('#diagnostics-device-errors').textContent = count.toLocaleString('fr-FR');
+  $('#diagnostics-device-caption').textContent = Number(devices?.totalCount || 0).toLocaleString('fr-FR') + ' périphériques détectés';
+  $('#diagnostics-device-summary').textContent = count
+    ? `${count.toLocaleString('fr-FR')} périphérique(s) signalé(s) par Windows. La liste est informative : ICON ne modifie aucun pilote.`
+    : 'Aucun code d’erreur Plug-and-Play n’a été retourné par Windows lors de cette lecture.';
+  renderTable('#diagnostics-device-table', [
+    { label: 'Périphérique', key: 'name' },
+    { label: 'Classe', key: 'class' },
+    { label: 'Fabricant', key: 'manufacturer' },
+    { label: 'Code', render: item => '<strong>' + esc(item.errorCode) + '</strong>' },
+    { label: 'Information Windows', key: 'description' }
+  ], errors, 'Aucun périphérique en erreur n’a été signalé.');
+  if (devices?.truncated) $('#diagnostics-device-summary').textContent += ' Liste limitée aux 80 premières entrées.';
+}
+function renderDiagnosticsEvents(data) {
+  const events = data?.items || [];
+  const filtered = filterItems(events, $('#diagnostics-event-search').value, ['time', 'level', 'eventId', 'source', 'log', 'message']);
+  renderTable('#diagnostics-events-table', [
+    { label: 'Date', render: item => esc(shortDate(item.time)) },
+    { label: 'Niveau', render: item => '<span class="diagnostics-event-level ' + (item.level === 'Critique' ? 'critical' : 'error') + '">' + esc(item.level) + '</span>' },
+    { label: 'Source', key: 'source' },
+    { label: 'ID', key: 'eventId' },
+    { label: 'Journal', key: 'log' },
+    { label: 'Détail', render: item => '<span class="diagnostics-event-message" title="' + esc(item.message) + '">' + esc(item.message) + '</span>' }
+  ], filtered, 'Aucun événement critique ou erreur trouvé dans les journaux accessibles.');
+}
+function renderDiagnostics(data) {
+  moduleCache.diagnostics = data;
+  if (!data?.supported) {
+    $('#diagnostics-state').className = 'security-state-banner neutral';
+    $('#diagnostics-state').innerHTML = '<strong>Diagnostics indisponibles</strong><span>' + esc(data?.message || 'Windows n’a pas communiqué les informations nécessaires.') + '</span>';
+    return;
+  }
+  const devices = data.devices || {};
+  const events = data.events || {};
+  const issueCount = Number(devices.errorCount || 0) + Number(events.criticalCount || 0) + Number(events.errorCount || 0);
+  $('#diagnostics-state').className = 'security-state-banner ' + (issueCount ? 'warning' : 'positive');
+  $('#diagnostics-state').innerHTML = issueCount
+    ? '<strong>Points à examiner : ' + issueCount.toLocaleString('fr-FR') + '</strong><span>Ce total rassemble les périphériques en erreur et les événements critiques/erreurs trouvés. Il ne constitue pas un score de santé.</span>'
+    : '<strong>Aucun signal prioritaire trouvé</strong><span>Les journaux accessibles et les statuts Plug-and-Play n’ont pas retourné de problème dans le périmètre analysé.</span>';
+  renderDiagnosticsBattery(data.battery, data.batteryCount);
+  renderDiagnosticsDevices(devices);
+  const total = Number(events.totalCount || 0);
+  $('#diagnostics-event-count').textContent = total.toLocaleString('fr-FR');
+  $('#diagnostics-event-caption').textContent = Number(events.criticalCount || 0).toLocaleString('fr-FR') + ' critique(s) · ' + Number(events.errorCount || 0).toLocaleString('fr-FR') + ' erreur(s)';
+  $('#diagnostics-events-summary').textContent = `${total.toLocaleString('fr-FR')} événement(s) retourné(s) dans les journaux accessibles sur les 7 derniers jours.`;
+  if (Number(events.logsRead || 0) < 2) $('#diagnostics-events-summary').textContent += ' Certains journaux n’ont pas pu être lus ou ne sont pas disponibles.';
+  if (events.truncated) $('#diagnostics-events-summary').textContent += ' La limite de lecture a été atteinte dans au moins un journal.';
+  renderDiagnosticsEvents(events);
+  $('#diagnostics-state').title = 'Dernière lecture : ' + shortDate(data.collectedAt);
+}
+async function loadDiagnostics() {
+  if (moduleLocks.has('diagnostics')) return;
+  moduleLocks.add('diagnostics');
+  const button = $('#diagnostics-refresh');
+  button.disabled = true;
+  button.textContent = 'Diagnostic en cours…';
+  $('#diagnostics-state').className = 'security-state-banner neutral';
+  $('#diagnostics-state').innerHTML = '<strong>Lecture en cours…</strong><span>Interrogation de la batterie, des périphériques et des journaux Windows.</span>';
+  try {
+    const result = await window.iconAPI.getDiagnostics();
+    renderDiagnostics(result);
+    if (result?.supported) toastMessage('Diagnostic Windows terminé.');
+  } catch (error) {
+    console.error('ICON diagnostics:', error);
+    $('#diagnostics-state').className = 'security-state-banner warning';
+    $('#diagnostics-state').innerHTML = '<strong>Diagnostic impossible</strong><span>Une erreur est survenue pendant la lecture des informations Windows.</span>';
+    toastMessage('Impossible de terminer le diagnostic.');
+  } finally {
+    moduleLocks.delete('diagnostics');
+    button.disabled = false;
+    button.textContent = 'Relancer le diagnostic';
+  }
+}
+
 async function loadNetwork(){
  if(moduleLocks.has('network'))return;moduleLocks.add('network');$('#network-table').innerHTML='<div class="empty-state">Lecture des interfaces…</div>';
  try{const r=await window.iconAPI.getNetworkConfiguration();if(!r.supported){$('#network-table').innerHTML='<div class="empty-state">'+esc(r.message||'Non disponible.')+'</div>';return;}
@@ -617,9 +728,9 @@ function handleScanProgress(p){
 function navigate(page){
  document.querySelectorAll('[data-content-page]').forEach(p=>p.classList.toggle('hidden',p.dataset.contentPage!==page));
  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
- const names={home:'Centre de contrôle',pc:'Inventaire matériel',disk:'Analyse disque',processes:'Processus',security:'Sécurité',hidden:'Éléments cachés',apps:'Applications installées',startup:'Démarrage',network:'Réseau',tools:'Outils système'};
+ const names={home:'Centre de contrôle',pc:'Inventaire matériel',disk:'Analyse disque',processes:'Processus',security:'Sécurité',diagnostics:'Diagnostics',hidden:'Éléments cachés',apps:'Applications installées',startup:'Démarrage',network:'Réseau',tools:'Outils système'};
  $('.titlebar-label').textContent=names[page]||'Centre de contrôle';
- if(page==='pc'&&!hardwareInventory&&!inventoryLock)analysePc();if(page==='processes')loadProcesses();if(page==='security')loadSecurity();
+ if(page==='pc'&&!hardwareInventory&&!inventoryLock)analysePc();if(page==='processes')loadProcesses();if(page==='security')loadSecurity();if(page==='diagnostics')loadDiagnostics();
  if(page==='apps')loadApplications();if(page==='startup')loadStartup();if(page==='network')loadNetwork();
 }
 
@@ -648,6 +759,9 @@ function setupEvents() {
   $('#process-refresh').addEventListener('click', loadProcesses);
   $('#process-search').addEventListener('input', renderProcesses);
   $('#security-refresh').addEventListener('click', loadSecurity);
+  $('#diagnostics-refresh').addEventListener('click', loadDiagnostics);
+  $('#diagnostics-export').addEventListener('click', exportReport);
+  $('#diagnostics-event-search').addEventListener('input', () => renderDiagnosticsEvents(moduleCache.diagnostics?.events));
   $('#defender-quick-scan').addEventListener('click', requestQuickScan);
   $('#apps-refresh').addEventListener('click', loadApplications);
   $('#apps-search').addEventListener('input', renderApplications);

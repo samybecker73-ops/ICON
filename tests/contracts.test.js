@@ -81,3 +81,34 @@ test('sidebar version label matches the package version', () => {
   const html = read('src/index.html');
   assert.ok(html.includes('ICON · Version ' + pkg.version));
 });
+
+
+test('diagnostics workspace is wired through the isolated preload bridge', () => {
+  const html = read('src/index.html');
+  const renderer = read('src/renderer.js');
+  const preload = read('preload.js');
+  const main = read('main.js');
+
+  assert.match(html, /data-page="diagnostics"/);
+  assert.match(html, /data-content-page="diagnostics"/);
+  assert.match(html, /id="diagnostics-refresh"/);
+  assert.match(html, /id="diagnostics-events-table"/);
+  assert.match(renderer, /getDiagnostics\(\)/);
+  assert.ok(preload.includes("getDiagnostics: () => ipcRenderer.invoke('diagnostics:run')"));
+  assert.match(main, /ipcMain\.handle\('diagnostics:run', \(\) => getDiagnostics\(\)\)/);
+});
+
+test('diagnostics only read Windows battery, PnP and event-log state', () => {
+  const main = read('main.js');
+  const start = main.indexOf('async function getDiagnostics()');
+  const end = main.indexOf('async function openSystemTool(toolKey)', start);
+  assert.ok(start >= 0 && end > start, 'diagnostics function must exist');
+  const diagnostics = main.slice(start, end);
+
+  assert.match(diagnostics, /Win32_Battery/);
+  assert.match(diagnostics, /BatteryStaticData/);
+  assert.match(diagnostics, /Win32_PnPEntity/);
+  assert.match(diagnostics, /Get-WinEvent/);
+  assert.match(diagnostics, /AddDays\(-7\)/);
+  assert.doesNotMatch(diagnostics, /\b(Remove-Item|Stop-Process|Disable-PnpDevice|Uninstall-Package|Restart-Computer)\b/i);
+});
