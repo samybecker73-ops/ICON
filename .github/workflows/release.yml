@@ -172,7 +172,7 @@ jobs:
             const finalBody = [generatedNotes, originalBody].filter(Boolean).join('\n\n').slice(0, 60000);
             // Ne pas modifier la Release GitHub : on conserve le résumé pour le message Discord.
 
-            const intro = '**ICON — le centre de contrôle PC de KAVIO.**\\nRetrouve les informations système, le suivi des ressources et les outils de diagnostic Windows dans une interface unifiée.\\n\\n';
+            const intro = '**ICON — le centre de contrôle PC de KAVIO.**\nRetrouve les informations système, le suivi des ressources et les outils de diagnostic Windows dans une interface unifiée.\n\n';
             const description = (intro + (finalBody || 'Une nouvelle version stable est disponible. Consulte la publication GitHub pour découvrir les nouveautés et télécharger la mise à jour.')).slice(0, 3500);
             const payload = {
               username: 'KAVIO Updates',
