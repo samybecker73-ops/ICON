@@ -37,11 +37,11 @@ jobs:
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             const version = pkg.version;
             if (!/^[0-9]+[.][0-9]+[.][0-9]+([-.][0-9A-Za-z.-]+)?$/.test(version)) {
-              core.setFailed(`Version invalide dans package.json : ${version}`);
+              core.setFailed('Version invalide dans package.json : ' + version);
               return;
             }
 
-            const tag = `v${version}`;
+            const tag = 'v' + version;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const sha = context.sha;
@@ -49,7 +49,7 @@ jobs:
             try {
               const existingRelease = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
               if (existingRelease.data && !existingRelease.data.draft) {
-                core.notice(`La version ${tag} est déjà publiée. Aucune nouvelle release à créer.`);
+                core.notice('La version ' + tag + ' est déjà publiée. Aucune nouvelle release à créer.');
                 core.setOutput('should_publish', 'false');
                 return;
               }
@@ -58,19 +58,19 @@ jobs:
             }
 
             try {
-              const existingTag = await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` });
+              const existingTag = await github.rest.git.getRef({ owner, repo, ref: 'tags/' + tag });
               if (existingTag.data.object.sha !== sha) {
                 await github.rest.git.updateRef({
-                  owner, repo, ref: `tags/${tag}`, sha, force: true
+                  owner, repo, ref: 'tags/' + tag, sha, force: true
                 });
-                core.info(`Tag ${tag} déplacé vers le commit courant après une publication incomplète.`);
+                core.info('Tag ' + tag + ' déplacé vers le commit courant après une publication incomplète.');
               }
             } catch (error) {
               if (error.status !== 404) throw error;
               await github.rest.git.createRef({
-                owner, repo, ref: `refs/tags/${tag}`, sha
+                owner, repo, ref: 'refs/tags/' + tag, sha
               });
-              core.info(`Tag ${tag} créé.`);
+              core.info('Tag ' + tag + ' créé.');
             }
 
             core.setOutput('version', version);
@@ -91,7 +91,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Announce stable release on Discord
+      - name: Generate changes since previous version and announce on Discord
         if: steps.release.outputs.should_publish == 'true'
         uses: actions/github-script@v7
         env:
@@ -101,28 +101,92 @@ jobs:
           script: |
             const webhook = process.env.DISCORD_WEBHOOK_URL;
             if (!webhook) {
-              core.warning('Secret DISCORD_WEBHOOK_URL absent : annonce Discord ignorée. Configure-le dans Settings > Secrets and variables > Actions.');
+              core.warning('Secret DISCORD_WEBHOOK_URL absent : annonce Discord ignorée.');
               return;
             }
 
-            const { data: release } = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: process.env.RELEASE_TAG
-            });
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = process.env.RELEASE_TAG;
+            const { data: release } = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
 
             if (release.draft || release.prerelease) {
               core.warning('La Release est en brouillon ou en préversion : aucune annonce Discord envoyée.');
               return;
             }
 
-            const body = (release.body || 'Une nouvelle version est disponible. Consultez la publication GitHub pour découvrir les nouveautés et télécharger la mise à jour.').slice(0, 3500);
+            let generatedNotes = '';
+            try {
+              const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+              const previous = releases
+                .filter(item => !item.draft && !item.prerelease && item.tag_name !== release.tag_name)
+                .sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0))[0];
+
+              if (previous) {
+                const comparison = await github.rest.repos.compareCommitsWithBasehead({
+                  owner,
+                  repo,
+                  basehead: previous.tag_name + '...' + release.tag_name
+                });
+                const groups = {
+                  'Fonctionnalités': [],
+                  'Corrections': [],
+                  'Améliorations': [],
+                  'Autres modifications': []
+                };
+
+                for (const item of (comparison.data.commits || [])) {
+                  const title = ((item.commit && item.commit.message) || '').split('\n')[0].trim();
+                  if (!title || /^(merge pull request|merge branch)\b/i.test(title)) continue;
+                  if (/^(ci|chore|docs|test|build|style)(\([^)]+\))?:/i.test(title)) continue;
+
+                  if (/^(feat|feature)(\([^)]+\))?:/i.test(title)) groups['Fonctionnalités'].push(title.replace(/^[^:]+:\s*/, ''));
+                  else if (/^(fix|bugfix)(\([^)]+\))?:/i.test(title)) groups['Corrections'].push(title.replace(/^[^:]+:\s*/, ''));
+                  else if (/^(perf|refactor|security|improve|enhancement)(\([^)]+\))?:/i.test(title)) groups['Améliorations'].push(title.replace(/^[^:]+:\s*/, ''));
+                  else groups['Autres modifications'].push(title);
+                }
+
+                const sections = [];
+                for (const label of Object.keys(groups)) {
+                  const items = [...new Set(groups[label])];
+                  if (items.length) {
+                    sections.push('**' + label + '**\n' + items.slice(0, 12).map(value => '• ' + value).join('\n'));
+                    if (items.length > 12) sections.push('• ' + (items.length - 12) + ' autre(s) changement(s) dans le dépôt.');
+                  }
+                }
+
+                if (sections.length) {
+                  generatedNotes = '## Changements depuis ' + previous.tag_name + '\n' +
+                    'Résumé automatique des commits du dépôt source :\n\n' + sections.join('\n\n');
+                } else {
+                  core.info('Aucun commit applicatif identifiable depuis la version précédente.');
+                }
+              } else {
+                core.warning('Aucune Release stable précédente trouvée pour comparer ICON.');
+              }
+            } catch (error) {
+              core.warning('Comparaison des commits impossible : ' + error.message);
+            }
+
+            const originalBody = (release.body || '').trim();
+            const finalBody = [generatedNotes, originalBody].filter(Boolean).join('\n\n').slice(0, 60000);
+            if (finalBody && finalBody !== (release.body || '')) {
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: release.id,
+                body: finalBody
+              });
+              core.info('Notes de version enrichies avec les changements depuis la Release précédente.');
+            }
+
+            const description = (finalBody || 'Une nouvelle version est disponible. Consultez la publication GitHub pour découvrir les nouveautés et télécharger la mise à jour.').slice(0, 3500);
             const payload = {
               username: 'KAVIO Updates',
               embeds: [{
-                title: `ICON — ${release.tag_name}`,
+                title: 'ICON — ' + release.tag_name,
                 url: release.html_url,
-                description: body,
+                description,
                 color: 12632256,
                 fields: [
                   { name: 'Application', value: 'ICON', inline: true },
@@ -142,8 +206,8 @@ jobs:
 
             if (!response.ok) {
               const detail = await response.text();
-              core.setFailed(`Échec du webhook Discord (${response.status}) : ${detail.slice(0, 500)}`);
+              core.setFailed('Échec du webhook Discord (' + response.status + ') : ' + detail.slice(0, 500));
               return;
             }
 
-            core.info(`Annonce Discord envoyée pour ICON ${release.tag_name}.`);
+            core.info('Annonce Discord envoyée pour ICON ' + release.tag_name + '.');
