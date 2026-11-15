@@ -170,15 +170,7 @@ jobs:
 
             const originalBody = (release.body || '').trim();
             const finalBody = [generatedNotes, originalBody].filter(Boolean).join('\n\n').slice(0, 60000);
-            if (finalBody && finalBody !== (release.body || '')) {
-              await github.rest.repos.updateRelease({
-                owner,
-                repo,
-                release_id: release.id,
-                body: finalBody
-              });
-              core.info('Notes de version enrichies avec les changements depuis la Release précédente.');
-            }
+            // Ne pas modifier la Release GitHub : on conserve le résumé pour le message Discord.
 
             const description = (finalBody || 'Une nouvelle version est disponible. Consultez la publication GitHub pour découvrir les nouveautés et télécharger la mise à jour.').slice(0, 3500);
             const payload = {
