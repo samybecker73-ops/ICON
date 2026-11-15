@@ -101,7 +101,7 @@ jobs:
           script: |
             const webhook = process.env.DISCORD_RELEASE_WEBHOOK_URL;
             if (!webhook) {
-              core.setFailed('Secret DISCORD_RELEASE_WEBHOOK_URL absent : ajoute-le dans Settings > Secrets and variables > Actions du dépôt ICON. Aucune annonce Discord n’a été envoyée.');
+              core.warning('Secret DISCORD_RELEASE_WEBHOOK_URL absent : publication conservée, annonce Discord ignorée. Ajoute ce secret pour activer les annonces.');
               return;
             }
 
