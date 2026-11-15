@@ -95,13 +95,13 @@ jobs:
         if: steps.release.outputs.should_publish == 'true'
         uses: actions/github-script@v7
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL || secrets.discord }}
+          DISCORD_RELEASE_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         with:
           script: |
-            const webhook = process.env.DISCORD_WEBHOOK_URL;
+            const webhook = process.env.DISCORD_RELEASE_WEBHOOK_URL;
             if (!webhook) {
-              core.setFailed('Secret DISCORD_WEBHOOK_URL absent : ajoute-le dans Settings > Secrets and variables > Actions du dépôt ICON. Aucune annonce Discord n’a été envoyée.');
+              core.setFailed('Secret DISCORD_RELEASE_WEBHOOK_URL absent : ajoute-le dans Settings > Secrets and variables > Actions du dépôt ICON. Aucune annonce Discord n’a été envoyée.');
               return;
             }
 
