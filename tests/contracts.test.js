@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -111,4 +112,10 @@ test('diagnostics only read Windows battery, PnP and event-log state', () => {
   assert.match(diagnostics, /Get-WinEvent/);
   assert.match(diagnostics, /AddDays\(-7\)/);
   assert.doesNotMatch(diagnostics, /\b(Remove-Item|Stop-Process|Disable-PnpDevice|Uninstall-Package|Restart-Computer)\b/i);
+});
+
+
+test('main and renderer JavaScript files pass the Node syntax parser', () => {
+  assert.doesNotThrow(() => new vm.Script(read('main.js'), { filename: 'main.js' }));
+  assert.doesNotThrow(() => new vm.Script(read('src/renderer.js'), { filename: 'src/renderer.js' }));
 });

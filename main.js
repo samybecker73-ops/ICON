@@ -522,7 +522,8 @@ $collectedAt = [DateTime]::UtcNow.ToString('o')
 $since = (Get-Date).AddDays(-7)
 
 $batteries = @()
-try { $batteries = @(Get-CimInstance -ClassName Win32_Battery -ErrorAction Stop) } catch {}
+$batteryQueryOk = $false
+try { $batteries = @(Get-CimInstance -ClassName Win32_Battery -ErrorAction Stop); $batteryQueryOk = $true } catch {}
 $battery = $null
 if ($batteries.Count -gt 0) {
   $item = $batteries[0]
@@ -565,7 +566,8 @@ if ($batteries.Count -gt 0) {
 }
 
 $allDevices = @()
-try { $allDevices = @(Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction Stop) } catch {}
+$devicesQueryOk = $false
+try { $allDevices = @(Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction Stop); $devicesQueryOk = $true } catch {}
 $problemDescriptions = @{
   1 = 'Configuration incorrecte'
   10 = 'Le périphérique ne peut pas démarrer'
@@ -633,7 +635,9 @@ $latestEvents = @($eventRows | Sort-Object time -Descending | Select-Object -Fir
   collectedAt = $collectedAt
   battery = $battery
   batteryCount = $batteries.Count
+  batteryQueryOk = $batteryQueryOk
   devices = [ordered]@{
+    available = $devicesQueryOk
     totalCount = $allDevices.Count
     errorCount = $problemDevices.Count
     errors = $deviceRows

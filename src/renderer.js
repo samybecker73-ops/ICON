@@ -612,12 +612,12 @@ function batteryStatusLabel(code) {
   };
   return labels[Number(code)] || 'Non communiqué';
 }
-function renderDiagnosticsBattery(battery, batteryCount) {
+function renderDiagnosticsBattery(battery, batteryCount, batteryQueryOk) {
   if (!battery) {
     $('#diagnostics-battery-charge').textContent = 'N/D';
-    $('#diagnostics-battery-caption').textContent = batteryCount ? 'Informations batterie indisponibles' : 'Aucune batterie détectée';
+    $('#diagnostics-battery-caption').textContent = batteryQueryOk === false ? 'Source batterie inaccessible' : (batteryCount ? 'Informations batterie indisponibles' : 'Aucune batterie détectée');
     $('#diagnostics-battery-health').textContent = 'N/D';
-    $('#diagnostics-battery-details').innerHTML = '<div class="empty-state">Aucune batterie compatible n’a été détectée. C’est normal sur un ordinateur fixe.</div>';
+    $('#diagnostics-battery-details').innerHTML = '<div class="empty-state">' + (batteryQueryOk === false ? 'Windows n’a pas permis de lire les informations de batterie.' : 'Aucune batterie compatible n’a été détectée. C’est normal sur un ordinateur fixe.') + '</div>';
     return;
   }
   const charge = battery.chargePercent !== null && battery.chargePercent !== undefined && Number.isFinite(Number(battery.chargePercent)) ? Number(battery.chargePercent) : null;
@@ -632,24 +632,24 @@ function renderDiagnosticsBattery(battery, batteryCount) {
     ['Autonomie estimée', battery.estimatedMinutes !== null && battery.estimatedMinutes !== undefined && Number.isFinite(Number(battery.estimatedMinutes)) ? duration(Number(battery.estimatedMinutes) * 60) : null],
     ['Capacité d’origine', battery.designedCapacity !== null && battery.designedCapacity !== undefined && Number.isFinite(Number(battery.designedCapacity)) ? Number(battery.designedCapacity).toLocaleString('fr-FR') + ' mWh' : null],
     ['Capacité pleine charge', battery.fullChargeCapacity !== null && battery.fullChargeCapacity !== undefined && Number.isFinite(Number(battery.fullChargeCapacity)) ? Number(battery.fullChargeCapacity).toLocaleString('fr-FR') + ' mWh' : null],
-    ['Capacité restante estimée', health === null ? null : health.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %']
+    ['État de santé estimé', health === null ? null : health.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %']
   ]);
 }
 function renderDiagnosticsDevices(devices) {
   const errors = devices?.errors || [];
   const count = Number(devices?.errorCount || 0);
-  $('#diagnostics-device-errors').textContent = count.toLocaleString('fr-FR');
-  $('#diagnostics-device-caption').textContent = Number(devices?.totalCount || 0).toLocaleString('fr-FR') + ' périphériques détectés';
-  $('#diagnostics-device-summary').textContent = count
-    ? `${count.toLocaleString('fr-FR')} périphérique(s) signalé(s) par Windows. La liste est informative : ICON ne modifie aucun pilote.`
-    : 'Aucun code d’erreur Plug-and-Play n’a été retourné par Windows lors de cette lecture.';
+  $('#diagnostics-device-errors').textContent = devices?.available === false ? 'N/D' : count.toLocaleString('fr-FR');
+  $('#diagnostics-device-caption').textContent = devices?.available === false ? 'Source Plug-and-Play inaccessible' : Number(devices?.totalCount || 0).toLocaleString('fr-FR') + ' périphériques détectés';
+  $('#diagnostics-device-summary').textContent = devices?.available === false
+    ? 'Windows n’a pas communiqué les informations Plug-and-Play.'
+    : (count ? `${count.toLocaleString('fr-FR')} périphérique(s) signalé(s) par Windows. La liste est informative : ICON ne modifie aucun pilote.` : 'Aucun code d’erreur Plug-and-Play n’a été retourné par Windows lors de cette lecture.');
   renderTable('#diagnostics-device-table', [
     { label: 'Périphérique', key: 'name' },
     { label: 'Classe', key: 'class' },
     { label: 'Fabricant', key: 'manufacturer' },
     { label: 'Code', render: item => '<strong>' + esc(item.errorCode) + '</strong>' },
     { label: 'Information Windows', key: 'description' }
-  ], errors, 'Aucun périphérique en erreur n’a été signalé.');
+  ], errors, devices?.available === false ? 'Liste de périphériques indisponible.' : 'Aucun périphérique en erreur n’a été signalé.');
   if (devices?.truncated) $('#diagnostics-device-summary').textContent += ' Liste limitée aux 80 premières entrées.';
 }
 function renderDiagnosticsEvents(data) {
@@ -674,11 +674,14 @@ function renderDiagnostics(data) {
   const devices = data.devices || {};
   const events = data.events || {};
   const issueCount = Number(devices.errorCount || 0) + Number(events.criticalCount || 0) + Number(events.errorCount || 0);
-  $('#diagnostics-state').className = 'security-state-banner ' + (issueCount ? 'warning' : 'positive');
+  const partial = devices.available === false || Number(events.logsRead || 0) < 2;
+  $('#diagnostics-state').className = 'security-state-banner ' + (issueCount ? 'warning' : (partial ? 'neutral' : 'positive'));
   $('#diagnostics-state').innerHTML = issueCount
     ? '<strong>Points à examiner : ' + issueCount.toLocaleString('fr-FR') + '</strong><span>Ce total rassemble les périphériques en erreur et les événements critiques/erreurs trouvés. Il ne constitue pas un score de santé.</span>'
-    : '<strong>Aucun signal prioritaire trouvé</strong><span>Les journaux accessibles et les statuts Plug-and-Play n’ont pas retourné de problème dans le périmètre analysé.</span>';
-  renderDiagnosticsBattery(data.battery, data.batteryCount);
+    : (partial
+      ? '<strong>Lecture partielle</strong><span>Au moins une source Windows n’a pas pu être lue. L’absence de résultat ne signifie pas qu’aucun problème n’existe.</span>'
+      : '<strong>Aucun signal prioritaire trouvé</strong><span>Les journaux accessibles et les statuts Plug-and-Play n’ont pas retourné de problème dans le périmètre analysé.</span>');
+  renderDiagnosticsBattery(data.battery, data.batteryCount, data.batteryQueryOk);
   renderDiagnosticsDevices(devices);
   const total = Number(events.totalCount || 0);
   $('#diagnostics-event-count').textContent = total.toLocaleString('fr-FR');
