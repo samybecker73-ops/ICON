@@ -111,8 +111,8 @@ jobs:
               summary = 'Première version stable disponible dans l’historique des publications.';
             }
 
-            const intro = '**ICON — le centre de contrôle PC de KAVIO.**\\n' +
-              'Retrouve les informations système, le suivi des ressources et les outils de diagnostic Windows dans une interface unifiée.\\n\\n';
+            const intro = '**ICON — le centre de contrôle PC de KAVIO.**\n' +
+              'Retrouve les informations système, le suivi des ressources et les outils de diagnostic Windows dans une interface unifiée.\n\n';
             const finalBody = [intro + summary, (release.body || '').trim()].filter(Boolean).join('\n\n');
 
             const payload = {
