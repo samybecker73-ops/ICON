@@ -60,3 +60,24 @@ test('release workflow is restricted to main while work branches build', () => {
   assert.match(read('.github/workflows/build.yml'), /path: dist\/ICON\.exe/);
   assert.match(read('.github/workflows/build.yml'), /work\/\*\*/);
 });
+
+test('Discord community entry opens only the configured invite through the main process', () => {
+  const html = read('src/index.html');
+  const renderer = read('src/renderer.js');
+  const preload = read('preload.js');
+  const main = read('main.js');
+
+  assert.ok(html.includes('id="open-discord-server"'));
+  assert.ok(html.includes('class="discord-icon"'));
+  assert.ok(html.includes('Rejoindre Discord'));
+  assert.match(renderer, /openDiscordServer\(\)/);
+  assert.ok(preload.includes("openDiscordServer: () => ipcRenderer.invoke('community:open-discord')"));
+  assert.ok(main.includes("const DISCORD_INVITE_URL = 'https://discord.gg/fKgFP82Jm'"));
+  assert.match(main, /ipcMain\.handle\('community:open-discord'/);
+  assert.match(main, /shell\.openExternal\(DISCORD_INVITE_URL\)/);
+});
+
+test('sidebar version label matches the package version', () => {
+  const html = read('src/index.html');
+  assert.ok(html.includes('ICON · Version ' + pkg.version));
+});

@@ -3,6 +3,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('iconAPI', {
+  openDiscordServer: () => ipcRenderer.invoke('community:open-discord'),
   getBaseInfo: () => ipcRenderer.invoke('system:base'),
   getMemoryInfo: () => ipcRenderer.invoke('system:memory'),
   getCpuUsage: () => ipcRenderer.invoke('system:cpu'),

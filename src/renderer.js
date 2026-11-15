@@ -656,6 +656,15 @@ function setupEvents() {
   $('#network-refresh').addEventListener('click', loadNetwork);
   document.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => openTool(b.dataset.tool)));
   removeScanProgressListener = window.iconAPI.onScanProgress(handleScanProgress);
+  $('#open-discord-server').addEventListener('click', async () => {
+    try {
+      const result = await window.iconAPI.openDiscordServer();
+      if (!result?.ok) toastMessage(result?.message || 'Impossible d’ouvrir le serveur Discord.');
+    } catch (error) {
+      console.warn('ICON Discord link:', error);
+      toastMessage('Impossible d’ouvrir le serveur Discord dans le navigateur.');
+    }
+  });
   $('#open-settings').addEventListener('click', openSettings);
   $('#settings-close').addEventListener('click', closeSettings);
   $('#settings-overlay').addEventListener('click', event => { if (event.target === $('#settings-overlay')) closeSettings(); });

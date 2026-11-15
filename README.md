@@ -35,6 +35,10 @@ npm test
 npm start
 ```
 
+## Communauté Discord
+
+Un accès permanent **Rejoindre Discord** est disponible dans la barre latérale de l’application. Il ouvre l’invitation du serveur dans le navigateur par défaut : https://discord.gg/fKgFP82Jm. Le lien est géré côté processus principal Electron et n’accepte pas d’adresse fournie par l’interface.
+
 ## Télécharger ICON pour Windows
 
 Deux formats sont prévus dans chaque publication GitHub :

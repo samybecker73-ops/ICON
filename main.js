@@ -10,6 +10,7 @@ const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 
 const execFileAsync = promisify(execFile);
+const DISCORD_INVITE_URL = 'https://discord.gg/fKgFP82Jm';
 let mainWindow;
 let updateDownloaded = false;
 let updateCheckInProgress = false;
@@ -584,6 +585,18 @@ ipcMain.handle('updates:install', () => {
   }
   autoUpdater.quitAndInstall(false, true);
   return { ok: true };
+});
+
+ipcMain.handle('community:open-discord', async () => {
+  try {
+    await shell.openExternal(DISCORD_INVITE_URL);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      message: String(error?.message || 'Ouverture du serveur Discord impossible.').slice(0, 300)
+    };
+  }
 });
 
 ipcMain.on('window:minimize', () => mainWindow?.minimize());
