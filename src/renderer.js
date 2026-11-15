@@ -620,8 +620,8 @@ function renderDiagnosticsBattery(battery, batteryCount) {
     $('#diagnostics-battery-details').innerHTML = '<div class="empty-state">Aucune batterie compatible n’a été détectée. C’est normal sur un ordinateur fixe.</div>';
     return;
   }
-  const charge = Number.isFinite(Number(battery.chargePercent)) ? Number(battery.chargePercent) : null;
-  const health = Number.isFinite(Number(battery.healthPercent)) ? Number(battery.healthPercent) : null;
+  const charge = battery.chargePercent !== null && battery.chargePercent !== undefined && Number.isFinite(Number(battery.chargePercent)) ? Number(battery.chargePercent) : null;
+  const health = battery.healthPercent !== null && battery.healthPercent !== undefined && Number.isFinite(Number(battery.healthPercent)) ? Number(battery.healthPercent) : null;
   $('#diagnostics-battery-charge').textContent = charge === null ? '—' : charge.toLocaleString('fr-FR') + ' %';
   $('#diagnostics-battery-caption').textContent = batteryStatusLabel(battery.statusCode);
   $('#diagnostics-battery-health').textContent = health === null ? '—' : health.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %';
@@ -629,9 +629,9 @@ function renderDiagnosticsBattery(battery, batteryCount) {
     ['Modèle', battery.name],
     ['État rapporté par Windows', batteryStatusLabel(battery.statusCode)],
     ['Charge actuelle', charge === null ? null : charge + ' %'],
-    ['Autonomie estimée', Number.isFinite(Number(battery.estimatedMinutes)) ? duration(Number(battery.estimatedMinutes) * 60) : null],
-    ['Capacité d’origine', Number.isFinite(Number(battery.designedCapacity)) ? Number(battery.designedCapacity).toLocaleString('fr-FR') + ' mWh' : null],
-    ['Capacité pleine charge', Number.isFinite(Number(battery.fullChargeCapacity)) ? Number(battery.fullChargeCapacity).toLocaleString('fr-FR') + ' mWh' : null],
+    ['Autonomie estimée', battery.estimatedMinutes !== null && battery.estimatedMinutes !== undefined && Number.isFinite(Number(battery.estimatedMinutes)) ? duration(Number(battery.estimatedMinutes) * 60) : null],
+    ['Capacité d’origine', battery.designedCapacity !== null && battery.designedCapacity !== undefined && Number.isFinite(Number(battery.designedCapacity)) ? Number(battery.designedCapacity).toLocaleString('fr-FR') + ' mWh' : null],
+    ['Capacité pleine charge', battery.fullChargeCapacity !== null && battery.fullChargeCapacity !== undefined && Number.isFinite(Number(battery.fullChargeCapacity)) ? Number(battery.fullChargeCapacity).toLocaleString('fr-FR') + ' mWh' : null],
     ['Capacité restante estimée', health === null ? null : health.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %']
   ]);
 }

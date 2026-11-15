@@ -516,7 +516,7 @@ async function getDiagnostics() {
     };
   }
 
-  const script = String.raw\`
+  const script = String.raw`
 $ErrorActionPreference = 'SilentlyContinue'
 $collectedAt = [DateTime]::UtcNow.ToString('o')
 $since = (Get-Date).AddDays(-7)
@@ -650,7 +650,7 @@ $latestEvents = @($eventRows | Sort-Object time -Descending | Select-Object -Fir
     maxPerLog = 150
   }
 } | ConvertTo-Json -Depth 7 -Compress
-\`;
+`;
 
   try {
     return await runPowerShellJson(script, 60000, 12 * 1024 * 1024) || {
