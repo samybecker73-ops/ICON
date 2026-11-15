@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -48,7 +49,7 @@ test('file scans are user initiated and do not delete data', () => {
 
 test('each main module has a navigation target', () => {
   const html = read('src/index.html');
-  for (const page of ['home', 'pc', 'disk', 'processes', 'security', 'hidden', 'apps', 'startup', 'network', 'tools']) {
+  for (const page of ['home', 'pc', 'disk', 'processes', 'security', 'diagnostics', 'hidden', 'apps', 'startup', 'network', 'tools']) {
     assert.match(html, new RegExp('data-content-page="' + page + '"'));
     assert.match(html, new RegExp('data-page="' + page + '"'));
   }
@@ -59,4 +60,77 @@ test('release workflow is restricted to main while work branches build', () => {
   assert.match(read('.github/workflows/release.yml'), /--win nsis portable --publish always/);
   assert.match(read('.github/workflows/build.yml'), /path: dist\/ICON\.exe/);
   assert.match(read('.github/workflows/build.yml'), /work\/\*\*/);
+});
+
+test('Discord community entry opens only the configured invite through the main process', () => {
+  const html = read('src/index.html');
+  const renderer = read('src/renderer.js');
+  const preload = read('preload.js');
+  const main = read('main.js');
+
+  assert.ok(html.includes('id="open-discord-server"'));
+  assert.ok(html.includes('class="discord-icon"'));
+  assert.ok(html.includes('Rejoindre Discord'));
+  assert.match(renderer, /openDiscordServer\(\)/);
+  assert.ok(preload.includes("openDiscordServer: () => ipcRenderer.invoke('community:open-discord')"));
+  assert.ok(main.includes("const DISCORD_INVITE_URL = 'https://discord.gg/fKgFP82Jm'"));
+  assert.match(main, /ipcMain\.handle\('community:open-discord'/);
+  assert.match(main, /shell\.openExternal\(DISCORD_INVITE_URL\)/);
+});
+
+test('sidebar version label matches the package version', () => {
+  const html = read('src/index.html');
+  assert.ok(html.includes('ICON · Version ' + pkg.version));
+});
+
+
+test('diagnostics workspace is wired through the isolated preload bridge', () => {
+  const html = read('src/index.html');
+  const renderer = read('src/renderer.js');
+  const preload = read('preload.js');
+  const main = read('main.js');
+
+  assert.match(html, /data-page="diagnostics"/);
+  assert.match(html, /data-content-page="diagnostics"/);
+  assert.match(html, /id="diagnostics-refresh"/);
+  assert.match(html, /id="diagnostics-events-table"/);
+  assert.match(renderer, /getDiagnostics\(\)/);
+  assert.ok(preload.includes("getDiagnostics: () => ipcRenderer.invoke('diagnostics:run')"));
+  assert.match(main, /ipcMain\.handle\('diagnostics:run', \(\) => getDiagnostics\(\)\)/);
+});
+
+test('diagnostics only read Windows battery, PnP and event-log state', () => {
+  const main = read('main.js');
+  const start = main.indexOf('async function getDiagnostics()');
+  const end = main.indexOf('async function openSystemTool(toolKey)', start);
+  assert.ok(start >= 0 && end > start, 'diagnostics function must exist');
+  const diagnostics = main.slice(start, end);
+
+  assert.match(diagnostics, /Win32_Battery/);
+  assert.match(diagnostics, /BatteryStaticData/);
+  assert.match(diagnostics, /Win32_PnPEntity/);
+  assert.match(diagnostics, /Get-WinEvent/);
+  assert.match(diagnostics, /AddDays\(-7\)/);
+  assert.doesNotMatch(diagnostics, /\b(Remove-Item|Stop-Process|Disable-PnpDevice|Uninstall-Package|Restart-Computer)\b/i);
+});
+
+
+test('main and renderer JavaScript files pass the Node syntax parser', () => {
+  assert.doesNotThrow(() => new vm.Script(read('main.js'), { filename: 'main.js' }));
+  assert.doesNotThrow(() => new vm.Script(read('src/renderer.js'), { filename: 'src/renderer.js' }));
+});
+
+
+test('dashboard reflects the detected GPU and uses the application version', () => {
+  const html = read('src/index.html');
+  const renderer = read('src/renderer.js');
+  assert.match(html, /id="gpu-caption"/);
+  assert.match(html, /id="sidebar-version"/);
+  assert.match(renderer, /gpu\.Name/);
+  assert.match(renderer, /currentSnapshot\?\.base\?\.appVersion/);
+});
+
+test('renderer defines one navigation function', () => {
+  const renderer = read('src/renderer.js');
+  assert.equal((renderer.match(/function navigate\(page\)/g) || []).length, 1);
 });

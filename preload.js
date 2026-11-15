@@ -3,6 +3,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('iconAPI', {
+  openDiscordServer: () => ipcRenderer.invoke('community:open-discord'),
   getBaseInfo: () => ipcRenderer.invoke('system:base'),
   getMemoryInfo: () => ipcRenderer.invoke('system:memory'),
   getCpuUsage: () => ipcRenderer.invoke('system:cpu'),
@@ -10,6 +11,7 @@ contextBridge.exposeInMainWorld('iconAPI', {
   getSystemDetails: () => ipcRenderer.invoke('system:details'),
   getProcesses: () => ipcRenderer.invoke('system:processes'),
   getNetworkConfiguration: () => ipcRenderer.invoke('system:network'),
+  getDiagnostics: () => ipcRenderer.invoke('diagnostics:run'),
   getInstalledApplications: () => ipcRenderer.invoke('apps:installed'),
   getStartupApplications: () => ipcRenderer.invoke('apps:startup'),
   getSecurityStatus: () => ipcRenderer.invoke('security:status'),

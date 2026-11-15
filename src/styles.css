@@ -69,3 +69,28 @@
 button:disabled{opacity:.42;cursor:not-allowed!important;transform:none!important}
 @media(max-width:1100px){.module-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.module-stats-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.module-stats-grid,.module-stats-grid.compact,.tool-grid{grid-template-columns:1fr}.module-context,.module-heading,.module-toolbar{align-items:flex-start;flex-direction:column}.module-search{width:100%}.scan-progress-meta{flex-direction:column}}
+
+
+/* Community entry — Discord */
+.sidebar{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#303741 transparent}
+.discord-link{width:100%;min-height:48px;display:flex;align-items:center;gap:10px;margin:0 0 9px;padding:7px 10px;border:1px solid #343d49;border-radius:8px;background:linear-gradient(110deg,rgba(88,101,242,.13),rgba(255,255,255,.025));color:#e9edf3;text-align:left;cursor:pointer;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}
+.discord-link:hover{border-color:#6877e8;background:linear-gradient(110deg,rgba(88,101,242,.23),rgba(255,255,255,.045));box-shadow:0 5px 18px rgba(0,0,0,.18);transform:translateY(-1px)}
+.discord-link:active{transform:translateY(0)}
+.discord-link:focus-visible{outline:2px solid #8794ff;outline-offset:3px}
+.discord-icon-wrap{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border:1px solid rgba(133,148,255,.4);border-radius:7px;background:#5865f2;color:#fff}
+.discord-icon{width:18px;height:18px;display:block;fill:currentColor}
+.discord-link-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:3px}
+.discord-link-copy strong{font-size:10px;font-weight:650;line-height:1.2}
+.discord-link-copy small{color:#929caf;font-size:8px;line-height:1.2;white-space:nowrap}
+.discord-link-arrow{flex:0 0 auto;color:#aeb8ff;font-size:15px;line-height:1}
+@media(max-height:780px){.sidebar{padding-top:18px;padding-bottom:12px}.brand-block{padding-bottom:22px}.nav-item{min-height:39px}.main-nav{gap:3px}.discord-link{min-height:42px;margin-bottom:6px}.sidebar-version{margin-top:10px}}
+
+
+/* Read-only diagnostics workspace */
+.diagnostics-event-level{display:inline-flex;align-items:center;padding:4px 6px;border:1px solid #454d58;border-radius:4px;color:#cbd2da;font-size:9px;white-space:nowrap}
+.diagnostics-event-level.critical{border-color:#754b4b;background:rgba(154,72,72,.13);color:#e5baba}
+.diagnostics-event-level.error{border-color:#665343;background:rgba(140,100,60,.12);color:#ddc3a3}
+.diagnostics-event-message{display:block;max-width:480px;color:#aab3be;line-height:1.5;overflow-wrap:anywhere}
+#diagnostics-device-summary,#diagnostics-events-summary{margin:0 0 12px}
+#diagnostics-state{margin-bottom:14px}
+@media(max-width:760px){.diagnostics-event-message{max-width:240px}}

@@ -1,7 +1,7 @@
 {
   "name": "icon-pc-control",
   "productName": "ICON",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Centre de contrôle et diagnostic local pour Windows, macOS et Linux.",
   "main": "main.js",
   "author": "ICON",

@@ -38,6 +38,7 @@
         <button class="nav-item" data-page="disk"><span class="nav-icon">▤</span><span>Analyse disque</span></button>
         <button class="nav-item" data-page="processes"><span class="nav-icon">◫</span><span>Processus</span></button>
         <button class="nav-item" data-page="security"><span class="nav-icon">◇</span><span>Sécurité</span></button>
+        <button class="nav-item" data-page="diagnostics"><span class="nav-icon">⌕</span><span>Diagnostics</span></button>
         <button class="nav-item" data-page="hidden"><span class="nav-icon">◉</span><span>Éléments cachés</span></button>
         <button class="nav-item" data-page="apps"><span class="nav-icon">▦</span><span>Applications</span></button>
         <button class="nav-item" data-page="startup"><span class="nav-icon">ϟ</span><span>Démarrage</span></button>
@@ -45,9 +46,20 @@
         <button class="nav-item" data-page="tools"><span class="nav-icon">⚙</span><span>Outils système</span></button>
       </nav>
       <div class="sidebar-bottom">
+        <button class="discord-link" id="open-discord-server" type="button" title="Rejoindre le serveur Discord" aria-label="Rejoindre le serveur Discord (ouvre dans le navigateur)">
+          <span class="discord-icon-wrap" aria-hidden="true">
+            <svg class="discord-icon" viewBox="0 0 24 24" focusable="false">
+              <path d="M19.5 5.1a17 17 0 0 0-4.2-1.3l-.5 1a15.6 15.6 0 0 0-5.6 0l-.5-1a17 17 0 0 0-4.2 1.3C1.8 9 1.1 12.8 1.5 16.5a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8-1.7-.8.4-.3c3.2 1.5 6.6 1.5 9.8 0l.4.3-1.7.8 1.1 1.8a17.2 17.2 0 0 0 5.2-2.6c.5-4.2-.8-8-3.3-11.4z"/>
+              <circle cx="9" cy="11.9" r="1.15" fill="#11151b"/>
+              <circle cx="15" cy="11.9" r="1.15" fill="#11151b"/>
+            </svg>
+          </span>
+          <span class="discord-link-copy"><strong>Rejoindre Discord</strong><small>Communauté & actualités</small></span>
+          <span class="discord-link-arrow" aria-hidden="true">↗</span>
+        </button>
         <button class="nav-item subtle" id="replay-tour"><span class="nav-icon">?</span><span>Visite guidée</span></button>
         <button class="nav-item subtle" id="open-settings"><span class="nav-icon">⚙</span><span>Paramètres</span></button>
-        <div class="sidebar-version">ICON · Version 0.2.1</div>
+        <div class="sidebar-version" id="sidebar-version">ICON · Version 0.2.5</div>
       </div>
     </aside>
 
@@ -100,8 +112,8 @@
             </article>
             <article class="stat-card" id="gpu-card">
               <div class="stat-top"><span class="stat-label">Carte graphique</span><span class="stat-icon">▧</span></div>
-              <div class="stat-value stat-value-text" id="gpu-value">À venir</div>
-              <div class="stat-description">Mesure avancée non intégrée</div>
+              <div class="stat-value stat-value-text" id="gpu-value">À identifier</div>
+              <div class="stat-description" id="gpu-caption">Modèle affiché après l’inventaire matériel</div>
               <div class="mini-track muted-track"><span></span></div>
             </article>
           </div>
@@ -136,7 +148,7 @@
           </article>
           <article class="panel next-panel">
             <div class="panel-heading"><div><div class="eyebrow">FEUILLE DE ROUTE</div><h2>Les prochains modules</h2></div></div>
-            <div class="next-list"><div><span class="next-number">01</span><span>Inventaire détaillé du PC</span><em>À construire</em></div><div><span class="next-number">02</span><span>Analyse des fichiers et du disque</span><em>À construire</em></div><div><span class="next-number">03</span><span>Processus et sécurité</span><em>À construire</em></div></div>
+            <div class="next-list"><div><span class="next-number">01</span><span>Inventaire matériel & logiciels</span><em>Disponible</em></div><div><span class="next-number">02</span><span>Analyse disque & éléments cachés</span><em>Disponible</em></div><div><span class="next-number">03</span><span>Sécurité & diagnostics Windows</span><em>Disponible</em></div></div>
           </article>
         </section>
 
@@ -245,6 +257,44 @@
         <section class="module-stats-grid" id="security-cards"><article class="module-stat"><span>Antivirus</span><strong>—</strong><small>En attente</small></article><article class="module-stat"><span>Protection temps réel</span><strong>—</strong><small>En attente</small></article><article class="module-stat"><span>Pare-feu</span><strong>—</strong><small>En attente</small></article><article class="module-stat"><span>Signatures</span><strong>—</strong><small>En attente</small></article></section>
         <section class="content-grid"><article class="panel"><div class="panel-heading"><div><div class="eyebrow">MICROSOFT DEFENDER</div><h2>Protection antivirus</h2></div></div><div id="security-defender-details" class="pc-data-list"><div class="empty-state">En attente de la lecture.</div></div></article><article class="panel"><div class="panel-heading"><div><div class="eyebrow">PARE-FEU WINDOWS</div><h2>Profils réseau</h2></div></div><div id="security-firewall-details" class="pc-data-list"><div class="empty-state">En attente de la lecture.</div></div></article></section>
         <div class="security-note module-security-note"><strong>Important</strong><span>ICON ne remplace pas un antivirus. Une analyse rapide est transmise à Microsoft Defender et son résultat doit être confirmé dans Sécurité Windows. Une donnée inconnue n’est jamais considérée comme une protection active.</span></div>
+      </main>
+
+
+      <main class="dashboard module-page hidden" id="diagnostics-page" data-content-page="diagnostics">
+        <div class="page-heading">
+          <div><div class="eyebrow">SANTÉ DU SYSTÈME</div><h1>Diagnostics.</h1><p>Identifiez les points à examiner à partir des informations retournées par Windows.</p></div>
+          <div class="heading-actions"><button class="button button-secondary" id="diagnostics-export">Exporter le rapport</button><button class="button button-primary" id="diagnostics-refresh">Lancer le diagnostic</button></div>
+        </div>
+        <div class="security-state-banner neutral" id="diagnostics-state">
+          <strong>Diagnostic non lancé</strong><span>Les lectures sont locales et en lecture seule. Aucun correctif ne sera appliqué automatiquement.</span>
+        </div>
+        <section class="module-stats-grid">
+          <article class="module-stat"><span>Charge batterie</span><strong id="diagnostics-battery-charge">—</strong><small id="diagnostics-battery-caption">Donnée non lue</small></article>
+          <article class="module-stat"><span>Capacité batterie</span><strong id="diagnostics-battery-health">—</strong><small>Capacité complète / capacité d’origine</small></article>
+          <article class="module-stat"><span>Périphériques en erreur</span><strong id="diagnostics-device-errors">—</strong><small id="diagnostics-device-caption">État Plug-and-Play Windows</small></article>
+          <article class="module-stat"><span>Événements critiques / erreurs</span><strong id="diagnostics-event-count">—</strong><small id="diagnostics-event-caption">Journaux Système et Application · 7 jours</small></article>
+        </section>
+        <section class="content-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><div class="eyebrow">ALIMENTATION</div><h2>Batterie</h2></div><span class="module-local-tag">WMI WINDOWS</span></div>
+            <div id="diagnostics-battery-details" class="pc-data-list"><div class="empty-state">Lancez le diagnostic pour lire la batterie.</div></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><div class="eyebrow">MATÉRIEL & PILOTES</div><h2>Périphériques signalés</h2></div><button class="text-button" data-tool="deviceManager">Gestionnaire Windows →</button></div>
+            <p id="diagnostics-device-summary" class="module-disclaimer">Le statut détaillé sera chargé au lancement du diagnostic.</p>
+            <div id="diagnostics-device-table" class="module-table-wrap"><div class="empty-state">Aucune lecture effectuée.</div></div>
+          </article>
+        </section>
+        <section class="panel">
+          <div class="module-toolbar">
+            <div><div class="eyebrow">OBSERVATEUR D’ÉVÉNEMENTS</div><h2>Erreurs Windows récentes</h2></div>
+            <input class="module-search" id="diagnostics-event-search" type="search" placeholder="Rechercher un événement…" autocomplete="off">
+          </div>
+          <p id="diagnostics-events-summary" class="module-disclaimer">Événements critiques et erreurs des journaux Système et Application sur les 7 derniers jours.</p>
+          <div id="diagnostics-events-table" class="module-table-wrap"><div class="empty-state">Lancez le diagnostic pour lire les événements Windows.</div></div>
+          <p class="module-disclaimer">Limite de lecture : 150 événements par journal et 100 résultats affichés. Les journaux peuvent contenir des chemins ou noms propres à votre PC ; vérifiez le rapport avant de le partager.</p>
+        </section>
+        <p class="module-disclaimer">Ces informations aident à investiguer un problème, mais ne constituent pas un verdict automatique sur l’état de santé du PC. Une erreur ancienne ou isolée peut être sans conséquence.</p>
       </main>
 
       <main class="dashboard module-page hidden" id="hidden-page" data-content-page="hidden">
