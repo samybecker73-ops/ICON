@@ -105,14 +105,8 @@ jobs:
             }
 
             const finalBody = [summary, (release.body || '').trim()].filter(Boolean).join('\n\n');
-            if (finalBody && finalBody !== (release.body || '').trim()) {
-              await github.rest.repos.updateRelease({
-                owner,
-                repo,
-                release_id: release.id,
-                body: finalBody.slice(0, 60000)
-              });
-            }
+            // Ne pas modifier la Release : plusieurs entrées partagent parfois le même tag.
+            // Le résumé est publié directement sur Discord pour éviter l'erreur already_exists.
 
             const payload = {
               username: 'KAVIO Updates',
