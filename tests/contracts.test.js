@@ -49,7 +49,7 @@ test('file scans are user initiated and do not delete data', () => {
 
 test('each main module has a navigation target', () => {
   const html = read('src/index.html');
-  for (const page of ['home', 'pc', 'disk', 'processes', 'security', 'hidden', 'apps', 'startup', 'network', 'tools']) {
+  for (const page of ['home', 'pc', 'disk', 'processes', 'security', 'diagnostics', 'hidden', 'apps', 'startup', 'network', 'tools']) {
     assert.match(html, new RegExp('data-content-page="' + page + '"'));
     assert.match(html, new RegExp('data-page="' + page + '"'));
   }
@@ -118,4 +118,19 @@ test('diagnostics only read Windows battery, PnP and event-log state', () => {
 test('main and renderer JavaScript files pass the Node syntax parser', () => {
   assert.doesNotThrow(() => new vm.Script(read('main.js'), { filename: 'main.js' }));
   assert.doesNotThrow(() => new vm.Script(read('src/renderer.js'), { filename: 'src/renderer.js' }));
+});
+
+
+test('dashboard reflects the detected GPU and uses the application version', () => {
+  const html = read('src/index.html');
+  const renderer = read('src/renderer.js');
+  assert.match(html, /id="gpu-caption"/);
+  assert.match(html, /id="sidebar-version"/);
+  assert.match(renderer, /gpu\.Name/);
+  assert.match(renderer, /currentSnapshot\?\.base\?\.appVersion/);
+});
+
+test('renderer defines one navigation function', () => {
+  const renderer = read('src/renderer.js');
+  assert.equal((renderer.match(/function navigate\(page\)/g) || []).length, 1);
 });

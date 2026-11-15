@@ -24,7 +24,7 @@ const tour = [
   },
   {
     title: 'Comprenez votre ordinateur.',
-    text: 'Explorez les disques, les processus, les applications installées, le démarrage, le réseau et les informations de sécurité Windows.'
+    text: 'Explorez les composants, les disques, les processus, le réseau, la sécurité Windows et les diagnostics matériels.'
   },
   {
     title: 'ICON va évoluer avec vous.',
@@ -133,6 +133,7 @@ function renderSnapshot(snapshot) {
     $('#disk-bar').style.width = '0%';
   }
 
+  $('#sidebar-version').textContent = `ICON · Version ${valueOr(base.appVersion, '—')}`;
   $('#computer-name').textContent = valueOr(base.hostname, 'Cet ordinateur');
   $('#system-subtitle').textContent = `${valueOr(base.versionName)} · ${valueOr(base.arch).toUpperCase()}`;
   $('#detail-cpu').textContent = valueOr(base.cpuModel);
@@ -197,6 +198,8 @@ function renderInventory(data) {
   const monitors = normalArray(data.monitors);
   const cpu = cpus[0] || {};
   const gpu = graphics[0] || {};
+  $('#gpu-value').textContent = valueOr(gpu.Name, 'Non détectée');
+  $('#gpu-caption').textContent = gpu.Name ? 'Modèle détecté dans l’inventaire matériel' : 'Windows ne communique pas de modèle GPU';
   const board = boards[0] || {};
   const firmware = bios[0] || {};
   const totalMemory = Number(computer.TotalPhysicalMemory) || memories.reduce((total, item) => total + (Number(item.Capacity) || 0), 0);
@@ -299,14 +302,6 @@ function selectPcTab(name) {
   document.querySelectorAll('[data-pc-tab]').forEach(button => button.classList.toggle('active', button.dataset.pcTab === name));
   document.querySelectorAll('.pc-tab-panel').forEach(panel => panel.classList.toggle('hidden', panel.id !== `pc-tab-${name}`));
 }
-function navigate(page) {
-  $('#dashboard').classList.toggle('hidden', page !== 'home');
-  $('#pc-page').classList.toggle('hidden', page !== 'pc');
-  document.querySelectorAll('[data-page]').forEach(button => button.classList.toggle('active', button.dataset.page === page));
-  $('.titlebar-label').textContent = page === 'pc' ? 'Inventaire matériel' : 'Centre de contrôle';
-  if (page === 'pc' && !hardwareInventory && !inventoryLock) analysePc();
-}
-
 function tourRender() {
   const item = tour[activeTour];
   $('#tour-step-label').textContent = `${activeTour + 1} / ${tour.length}`;
@@ -353,7 +348,7 @@ async function exportReport() {
   try {
     const result = await window.iconAPI.exportReport({
       application: 'ICON',
-      version: updateInfo?.currentVersion || '0.2.1',
+      version: updateInfo?.currentVersion || currentSnapshot?.base?.appVersion || '—',
       generatedAt: new Date().toISOString(),
       note: 'Rapport local : inventaire matériel et mesures système. Aucune analyse antivirus ni analyse approfondie de fichiers effectuée.',
       hardwareDetails: hardwareInventory,
@@ -426,6 +421,7 @@ async function initializeUpdater() {
   try {
     updateInfo = await window.iconAPI.getUpdaterInfo();
     $('#update-current-version').textContent = updateInfo.currentVersion || '—';
+    $('#sidebar-version').textContent = `ICON · Version ${updateInfo.currentVersion || currentSnapshot?.base?.appVersion || '—'}`;
     if (!updateInfo.supported) updaterStatus({
       state: 'unsupported',
       message: updateInfo.isPortable
