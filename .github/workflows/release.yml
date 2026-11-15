@@ -95,7 +95,7 @@ jobs:
         if: steps.release.outputs.should_publish == 'true'
         uses: actions/github-script@v7
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.discord }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL || secrets.discord }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         with:
           script: |
@@ -172,7 +172,8 @@ jobs:
             const finalBody = [generatedNotes, originalBody].filter(Boolean).join('\n\n').slice(0, 60000);
             // Ne pas modifier la Release GitHub : on conserve le résumé pour le message Discord.
 
-            const description = (finalBody || 'Une nouvelle version est disponible. Consultez la publication GitHub pour découvrir les nouveautés et télécharger la mise à jour.').slice(0, 3500);
+            const intro = '**ICON — le centre de contrôle PC de KAVIO.**\\nRetrouve les informations système, le suivi des ressources et les outils de diagnostic Windows dans une interface unifiée.\\n\\n';
+            const description = (intro + (finalBody || 'Une nouvelle version stable est disponible. Consulte la publication GitHub pour découvrir les nouveautés et télécharger la mise à jour.')).slice(0, 3500);
             const payload = {
               username: 'KAVIO Updates',
               embeds: [{
@@ -180,6 +181,9 @@ jobs:
                 url: release.html_url,
                 description,
                 color: 12632256,
+                image: {
+                  url: 'https://raw.githubusercontent.com/samybecker73-ops/ICON/main/assets/discord/icon-logo.png'
+                },
                 fields: [
                   { name: 'Application', value: 'ICON', inline: true },
                   { name: 'Version', value: release.tag_name, inline: true }
