@@ -1,0 +1,146 @@
+name: ICON Discord Announcement (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de la Release à annoncer (laisser vide pour la dernière version stable)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  announce:
+    name: Announce an existing ICON release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send release announcement to Discord
+        uses: actions/github-script@v7
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_TAG_INPUT: ${{ inputs.tag }}
+        with:
+          script: |
+            const webhook = process.env.DISCORD_WEBHOOK_URL;
+            if (!webhook) {
+              core.setFailed('Secret DISCORD_WEBHOOK_URL absent : ajoute-le dans Settings > Secrets and variables > Actions du dépôt ICON.');
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const requestedTag = (process.env.RELEASE_TAG_INPUT || '').trim();
+
+            let release;
+            if (requestedTag) {
+              const result = await github.rest.repos.getReleaseByTag({ owner, repo, tag: requestedTag });
+              release = result.data;
+            } else {
+              const result = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+              release = result.data
+                .filter(item => !item.draft && !item.prerelease)
+                .sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0))[0];
+            }
+
+            if (!release || release.draft || release.prerelease) {
+              core.setFailed('Aucune Release stable correspondante n’a été trouvée.');
+              return;
+            }
+
+            const list = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+            const seenTags = new Set();
+            const stableReleases = list.data
+              .filter(item => !item.draft && !item.prerelease && item.tag_name !== release.tag_name)
+              .filter(item => {
+                if (seenTags.has(item.tag_name)) return false;
+                seenTags.add(item.tag_name);
+                return true;
+              })
+              .sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
+            const previous = stableReleases.find(item =>
+              new Date(item.published_at || 0) <= new Date(release.published_at || 0)
+            );
+
+            let summary = '';
+            if (previous) {
+              try {
+                const comparison = await github.rest.repos.compareCommitsWithBasehead({
+                  owner,
+                  repo,
+                  basehead: previous.tag_name + '...' + release.tag_name
+                });
+
+                const categories = {
+                  'Nouveautés': [],
+                  'Corrections': [],
+                  'Améliorations': []
+                };
+
+                for (const item of comparison.data.commits || []) {
+                  const title = (((item.commit || {}).message) || '').split('\n')[0].trim();
+                  if (!title || /^(merge pull request|merge branch)\b/i.test(title)) continue;
+                  if (/^(ci|chore|docs|test|build|style)(\([^)]+\))?:/i.test(title)) continue;
+
+                  if (/^(feat|feature)(\([^)]+\))?:/i.test(title)) categories['Nouveautés'].push(title.replace(/^[^:]+:\s*/, ''));
+                  else if (/^(fix|bugfix)(\([^)]+\))?:/i.test(title)) categories['Corrections'].push(title.replace(/^[^:]+:\s*/, ''));
+                  else if (/^(perf|refactor|security|improve|enhancement)(\([^)]+\))?:/i.test(title)) categories['Améliorations'].push(title.replace(/^[^:]+:\s*/, ''));
+                }
+
+                const sections = Object.entries(categories)
+                  .filter(([, items]) => items.length)
+                  .map(([label, items]) => '**' + label + '**\n' + [...new Set(items)].slice(0, 10).map(x => '• ' + x).join('\n'));
+
+                summary = sections.length
+                  ? '## Changements depuis ' + previous.tag_name + '\n' + sections.join('\n\n')
+                  : 'Version publiée : ' + release.tag_name + '. Aucun changement applicatif identifié dans les messages de commits entre ' + previous.tag_name + ' et cette version.';
+              } catch (error) {
+                core.warning('Comparaison indisponible : ' + error.message);
+                summary = 'Une nouvelle version stable d’ICON est disponible. Consultez la Release pour les détails.';
+              }
+            } else {
+              summary = 'Nouvelle version stable d’ICON disponible.';
+            }
+
+            const finalBody = [summary, (release.body || '').trim()].filter(Boolean).join('\n\n');
+            if (finalBody && finalBody !== (release.body || '').trim()) {
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: release.id,
+                body: finalBody.slice(0, 60000)
+              });
+            }
+
+            const payload = {
+              username: 'KAVIO Updates',
+              embeds: [{
+                title: 'ICON — ' + release.tag_name,
+                url: release.html_url,
+                description: finalBody.slice(0, 3500),
+                color: 12632256,
+                fields: [
+                  { name: 'Application', value: 'ICON', inline: true },
+                  { name: 'Version', value: release.tag_name, inline: true }
+                ],
+                footer: { text: 'KAVIO • Publication officielle • ICON' },
+                timestamp: release.published_at || new Date().toISOString()
+              }],
+              allowed_mentions: { parse: [] }
+            };
+
+            const response = await fetch(webhook, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+              const detail = await response.text();
+              core.setFailed('Échec du webhook Discord (' + response.status + ') : ' + detail.slice(0, 500));
+              return;
+            }
+
+            core.info('Annonce Discord envoyée pour ICON ' + release.tag_name + '.');
